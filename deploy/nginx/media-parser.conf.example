@@ -41,6 +41,11 @@ server {
     proxy_send_timeout 130s;
     proxy_read_timeout 130s;
 
+    # 在宿主机层完成后台路径标准化，避免容器的 8080 端口泄漏到 Location。
+    location = /admin {
+        return 302 https://$host/admin/;
+    }
+
     location / {
         proxy_pass http://media_parser;
         proxy_http_version 1.1;

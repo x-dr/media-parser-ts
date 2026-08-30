@@ -25,3 +25,6 @@ data/
 .agents/
 .codex/
 .codebuddy/
+
+#conf
+deploy/nginx/media-parser.conf
