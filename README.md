@@ -12,6 +12,7 @@
   <a href="#核心能力">核心能力</a> ·
   <a href="#支持平台">支持平台</a> ·
   <a href="#docker-部署推荐">部署指南</a> ·
+  <a href="docs/deployment.md">生产部署与 Nginx</a> ·
   <a href="#api-调用">API 调用</a> ·
   <a href="#本地开发">本地开发</a> ·
   <a href="api/openapi/openapi.yaml">OpenAPI</a>
@@ -85,6 +86,8 @@
 
 ## Docker 部署（推荐）
 
+本节用于快速启动。包含全部环境变量、HTTPS、宿主 Nginx、升级、备份和故障处理的生产步骤见[生产部署与 Nginx 反向代理](docs/deployment.md)，可直接使用的配置见 [deploy/nginx/media-parser.conf.example](deploy/nginx/media-parser.conf.example)。
+
 ### 1. 准备配置
 
 ```bash
@@ -104,6 +107,8 @@ chmod 600 .env .local/admin-password
 ADMIN_BOOTSTRAP_USERNAME=admin
 APP_ENCRYPTION_KEY=<Base64 编码的 32 字节随机密钥>
 PUBLIC_WEB_API_KEY=
+MEDIA_PARSER_BIND_ADDRESS=127.0.0.1
+TRUST_PROXY=2
 ```
 
 `APP_ENCRYPTION_KEY` 用于加密平台凭据，必须由可信的密码管理器或系统密钥工具生成并长期安全保存。不要提交 `.env`、密码文件、Cookie、API Key 或 SQLite 数据库。
@@ -115,7 +120,7 @@ docker compose up --detach --build
 docker compose ps
 ```
 
-默认入口为 `http://127.0.0.1:8051`：
+默认入口仅绑定 `http://127.0.0.1:8051`，应由同一宿主机的 Nginx 对外提供 HTTPS：
 
 - 公开解析页：`http://127.0.0.1:8051/`
 - 管理后台：`http://127.0.0.1:8051/admin/`
@@ -169,6 +174,8 @@ curl --fail http://127.0.0.1:8051/web-api/status
 | `/healthz` | 入口 Nginx 健康检查 |
 
 Compose 只发布 `${MEDIA_PARSER_PORT:-8051}`，API 与 Admin 不直接暴露宿主端口。SQLite 数据保存在 `media-parser-data` 命名卷，管理员初始密码以只读 Compose secret 挂载。
+
+生产环境保持 `MEDIA_PARSER_BIND_ADDRESS=127.0.0.1`，并按[配置示例](deploy/nginx/media-parser.conf.example)把域名反向代理到 `127.0.0.1:8051`。此时请求经过宿主与容器内两层 Nginx，`TRUST_PROXY` 应为 `2`；若在可信局域网直接访问 Compose 入口，则改为 `MEDIA_PARSER_BIND_ADDRESS=0.0.0.0` 和 `TRUST_PROXY=1`。
 
 ## API 调用
 
@@ -344,6 +351,7 @@ media-parser-ts/
 │   └── openapi/             # OpenAPI 3.1 契约
 ├── admin/                   # React 19 + Ant Design 6 管理后台
 ├── web/                     # React 19 + Ant Design 6 公开解析页
+├── deploy/nginx/            # 宿主 Nginx HTTP/HTTPS 反向代理示例
 ├── docs/                    # 重构设计、进度与界面设计资料
 ├── compose.yaml             # API + Admin + Web 编排
 └── package.json             # pnpm workspace 统一入口
@@ -354,6 +362,7 @@ media-parser-ts/
 | 变量 | 默认值 | 说明 |
 | --- | --- | --- |
 | `PORT` | `8051` | API 监听端口 |
+| `MEDIA_PARSER_BIND_ADDRESS` | `127.0.0.1` | Compose 宿主绑定地址；Nginx 同机部署应保持回环地址 |
 | `MEDIA_PARSER_PORT` | `8051` | Compose 发布到宿主机的端口 |
 | `LOG_LEVEL` | `info` | `fatal/error/warn/info/debug/trace/silent` |
 | `DATABASE_PATH` | `/app/data/media-parser.sqlite` | SQLite 路径；宿主开发建议 `.local/media-parser.sqlite` |
@@ -370,7 +379,7 @@ media-parser-ts/
 | `APP_ENCRYPTION_KEY` | 无 | 当前 Base64 32 字节平台凭据密钥 |
 | `APP_ENCRYPTION_KEY_PREVIOUS` | 无 | 密钥轮换期间用于解密旧数据 |
 | `CORS_ORIGINS` | 空 | 逗号分隔的精确 HTTP(S) Origin，不支持通配符 |
-| `TRUST_PROXY` | `false` | `false`、可信代理跳数或可信地址列表 |
+| `TRUST_PROXY` | `false` | `false`、可信代理跳数或可信地址列表，不能写 `true`；本文生产拓扑使用 `2` |
 | `PARSER_ENGINE` | `typescript` | `typescript` 或全局回滚模式 `legacy-http` |
 | `LEGACY_PYTHON_URL` | 无 | `legacy-http` 模式下自托管 Python 服务的根 URL |
 | `DOUBAO_COOKIE` | 空 | 可选豆包 Cookie |

@@ -12,7 +12,7 @@ services:
       PORT: "8051"
       DATABASE_PATH: /app/data/media-parser.sqlite
       ADMIN_BOOTSTRAP_PASSWORD_FILE: /run/secrets/admin_password
-      TRUST_PROXY: "1"
+      TRUST_PROXY: "${TRUST_PROXY:-1}"
     secrets:
       - admin_password
     volumes:
@@ -54,7 +54,7 @@ services:
       admin:
         condition: service_healthy
     ports:
-      - "${MEDIA_PARSER_PORT:-8051}:8080"
+      - "${MEDIA_PARSER_BIND_ADDRESS:-127.0.0.1}:${MEDIA_PARSER_PORT:-8051}:8080"
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/healthz"]
       interval: 30s
