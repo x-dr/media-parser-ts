@@ -42,7 +42,13 @@
 
 ### 管理后台
 
-![管理后台](docs/admin-ui-design/admin-dashboard-desktop.png)
+运行概览：
+
+![管理后台运行概览](docs/admin-ui-design/admin-dashboard-desktop.png)
+
+调用日志（调用 IP 与服务端分页）：
+
+![管理后台调用日志](docs/admin-ui-design/admin-logs-desktop.png)
 
 ## 支持平台
 
