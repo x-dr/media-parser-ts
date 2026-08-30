@@ -53,9 +53,9 @@ export function MediaResultView({ response }: MediaResultViewProps) {
       children: <SubtitleList subtitles={data.subtitles ?? []} />,
     }] : []),
     {
-      key: 'technical',
-      label: <ResourceLabel icon={<CodeOutlined />} label="技术详情" />,
-      children: <TechnicalDetails response={response} />,
+      key: 'raw-response',
+      label: <ResourceLabel icon={<CodeOutlined />} label="原始响应" />,
+      children: <RawResponse response={response} />,
     },
   ];
 
@@ -101,16 +101,19 @@ export function MediaResultView({ response }: MediaResultViewProps) {
           <h3>{data.title?.trim() || '未提供标题'}</h3>
           <div className="media-actions">
             {currentVideo && (
-              <Button
-                type="primary"
-                size="large"
-                icon={<VideoCameraOutlined />}
-                href={currentVideo}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                查看 / 下载无水印视频
-              </Button>
+              <>
+                <Button
+                  type="primary"
+                  size="large"
+                  icon={<VideoCameraOutlined />}
+                  href={currentVideo}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  查看 / 下载无水印视频
+                </Button>
+                <CopyVideoLinkButton key={currentVideo} url={currentVideo} />
+              </>
             )}
             {cover && (
               <Button
@@ -244,7 +247,21 @@ function SubtitleList({ subtitles }: { subtitles: NonNullable<ParseSuccess['data
   );
 }
 
-function TechnicalDetails({ response }: { response: ParseSuccess }) {
+function CopyVideoLinkButton({ url }: { url: string }) {
+  const [copied, setCopied] = useState(false);
+  const copy = async () => {
+    await navigator.clipboard.writeText(url);
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 1_500);
+  };
+  return (
+    <Button size="large" icon={<CopyOutlined />} onClick={() => void copy()}>
+      {copied ? '视频链接已复制' : '复制视频链接'}
+    </Button>
+  );
+}
+
+function RawResponse({ response }: { response: ParseSuccess }) {
   const [copied, setCopied] = useState(false);
   const raw = JSON.stringify(response, null, 2);
   const copy = async () => {

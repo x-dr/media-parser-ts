@@ -92,7 +92,7 @@ function ErrorResult({
         )}
       </div>
       <details className="technical-error">
-        <summary>技术详情</summary>
+        <summary>原始响应</summary>
         <pre>{JSON.stringify(response, null, 2)}</pre>
       </details>
     </div>
