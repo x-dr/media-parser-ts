@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Media Parser 多平台去水印工具">
+  <defs>
+    <linearGradient id="web-tile" x1="56" y1="52" x2="456" y2="460" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FF7A31"/>
+      <stop offset="1" stop-color="#E74B21"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#web-tile)"/>
+  <g fill="none" stroke="#FFFFFF" stroke-width="32" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M206 108h168c32 0 58 26 58 58v150"/>
+    <path d="M136 158h176c32 0 58 26 58 58v150"/>
+  </g>
+  <rect x="58" y="206" width="310" height="236" rx="54" fill="#FFFFFF"/>
+  <path fill="url(#web-tile)" d="M146 273c0-17 19-27 33-18l106 67c14 9 14 29 0 38l-106 67c-14 9-33-1-33-18V273Z"/>
+  <circle cx="370" cy="370" r="70" fill="#FFFFFF" stroke="url(#web-tile)" stroke-width="16"/>
+  <path fill="#18211D" d="M370 322c-25 32-42 52-42 76a42 42 0 0 0 84 0c0-24-17-44-42-76Z"/>
+  <path d="m329 329 82 82" fill="none" stroke="url(#web-tile)" stroke-width="20" stroke-linecap="round"/>
+</svg>
