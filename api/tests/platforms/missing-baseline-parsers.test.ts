@@ -152,8 +152,8 @@ describe('the seven parsers that lacked standalone Python tests', () => {
       desc: 'Douyin fixture',
       video: {
         bit_rate: [{ play_addr: { url_list: [
-          'https://direct.example/video.mp4',
-          'https://referer-gated.example/video.mp4',
+          'https://v11-weba.douyinvod.com/video.mp4',
+          'https://v26-web.douyinvod.com/video.mp4',
           'https://www.douyin.com/aweme/v1/play/?video_id=fixture',
         ] } }],
         dynamic_cover: { url_list: ['https://cdn.example/cover.jpg'] },
@@ -169,7 +169,12 @@ describe('the seven parsers that lacked standalone Python tests', () => {
     const detailCall = session.calls.find((call) => call.kind === 'json');
     expect(detailCall?.url).toContain('a_bogus=');
     expect(detailCall?.options.headers).toMatchObject({ cookie: 'ttwid=fixture-id' });
-    expect(output.videoUrl).toBe('https://direct.example/video.mp4');
+    expect(output.videoUrl).toBe('https://v11-weba.douyinvod.com/video.mp4');
+    expect(output.videoList).toEqual([
+      'https://v11-weba.douyinvod.com/video.mp4',
+      'https://v26-web.douyinvod.com/video.mp4',
+      'https://www.douyin.com/aweme/v1/play/?video_id=fixture',
+    ]);
     expect(output.imageList).toEqual([{
       url: 'https://cdn.example/image.jpg', livePhotoUrl: 'https://cdn.example/live.mp4',
     }]);

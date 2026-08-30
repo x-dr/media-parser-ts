@@ -57,9 +57,10 @@ export class DouyinSharedParser implements PlatformParser {
     const detail = at(payload, 'aweme_detail');
     const bitRateUrls = array(at(detail, 'video', 'bit_rate', 0, 'play_addr', 'url_list'))
       .map((value) => string(value)).filter(Boolean);
-    // url_list contains equivalent CDN mirrors, not increasing quality levels. Douyin currently
-    // puts a browser-accessible direct CDN URL first and a Referer-gated web play endpoint last.
-    const videoUrl = bitRateUrls[0] ?? '';
+    // Douyin rotates equivalent CDN mirrors in url_list. Prefer the browser-accessible `*-weba`
+    // mirror and keep every other address as a fallback, without depending on array position.
+    const videoList = orderVideoUrls(bitRateUrls);
+    const videoUrl = videoList[0] ?? '';
     const imagesSource = array(at(detail, 'images')).length > 0
       ? array(at(detail, 'images'))
       : array(at(detail, 'image_list'));
@@ -75,6 +76,7 @@ export class DouyinSharedParser implements PlatformParser {
     return result({
       title: stringAt(detail, 'desc'),
       videoUrl: videoUrl || null,
+      videoList,
       audioUrl: stringAt(detail, 'music', 'play_url', 'url_list', 0) || null,
       coverUrl: stringAt(detail, 'video', 'dynamic_cover', 'url_list', 0) ||
         stringAt(detail, 'images', 0, 'url_list', 0) || null,
@@ -108,4 +110,18 @@ export class DouyinSharedParser implements PlatformParser {
     }
     return '';
   }
+}
+
+function orderVideoUrls(urls: readonly string[]): string[] {
+  const preferred: string[] = [];
+  const fallbacks: string[] = [];
+  for (const value of new Set(urls)) {
+    try {
+      const hostname = new URL(value).hostname.toLowerCase();
+      (hostname.endsWith('-weba.douyinvod.com') ? preferred : fallbacks).push(value);
+    } catch {
+      fallbacks.push(value);
+    }
+  }
+  return [...preferred, ...fallbacks];
 }
