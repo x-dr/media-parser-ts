@@ -12,10 +12,12 @@ RUN corepack enable
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY api/package.json ./api/package.json
 COPY admin/package.json ./admin/package.json
+COPY platform-icons/package.json ./platform-icons/package.json
 COPY web/package.json ./web/package.json
 RUN --mount=type=cache,id=media-parser-pnpm-alpine,target=/pnpm/store \
     pnpm install --frozen-lockfile --filter @media-parser/web
 
+COPY platform-icons ./platform-icons
 COPY web ./web
 RUN pnpm --filter @media-parser/web build
 

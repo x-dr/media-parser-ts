@@ -1,6 +1,7 @@
 packages:
   - api
   - admin
+  - platform-icons
   - web
 
 allowBuilds:

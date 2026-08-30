@@ -101,7 +101,8 @@ button, input, textarea, select { font: inherit; }
 .platform-table-card { position: relative; }
 .table-scroll-hint { display: none; padding: 10px; color: #87908a; text-align: center; font-size: 12px; background: #f9faf6; }
 .platform-name { display: flex; align-items: flex-start; gap: 12px; }
-.platform-mark { width: 44px; height: 44px; flex: 0 0 auto; display: grid; place-items: center; border-radius: 12px; color: #fff; font-size: 13px; font-weight: 700; background: linear-gradient(145deg, #18211d, #3b5e50); }
+.platform-mark { width: 44px; height: 44px; flex: 0 0 auto; display: grid; place-items: center; overflow: hidden; border: 1px solid rgb(24 33 29 / 9%); border-radius: 12px; color: #fff; font-size: 13px; font-weight: 700; background: #fff; box-shadow: 0 3px 8px rgb(24 33 29 / 10%); }
+.platform-mark img { width: 100%; height: 100%; display: block; object-fit: cover; }
 .platform-name > div { min-width: 0; }
 .platform-name strong, .platform-name code { display: block; margin-bottom: 4px; }
 .platform-name code { font-size: 12px; }

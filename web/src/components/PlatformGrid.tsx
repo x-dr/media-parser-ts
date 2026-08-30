@@ -6,8 +6,12 @@ import {
   PlayCircleOutlined,
   VideoCameraOutlined,
 } from '@ant-design/icons';
+import {
+  platformFallbackColor,
+  platformFallbackMark,
+  platformIconUrl,
+} from '@media-parser/platform-icons';
 import type { PublicPlatform } from '../types';
-import { platformBrand, platformMark } from '../lib/media';
 
 const mediaNames: Record<string, string> = {
   video: '视频',
@@ -68,14 +72,17 @@ function MarqueeRow({ items, reverse = false }: { items: PublicPlatform[]; rever
 }
 
 function PlatformCard({ platform }: { platform: PublicPlatform }) {
+  const iconUrl = platformIconUrl(platform.id);
   return (
     <article className="platform-card">
       <span
         className="platform-logo"
-        style={{ background: platformBrand(platform.name) }}
+        style={iconUrl ? undefined : { background: platformFallbackColor(platform.id) }}
         aria-hidden="true"
       >
-        {platformMark(platform.name)}
+        {iconUrl
+          ? <img src={iconUrl} alt="" decoding="async" />
+          : platformFallbackMark(platform.name)}
       </span>
       <div>
         <strong>{platform.name}</strong>

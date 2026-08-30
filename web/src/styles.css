@@ -316,7 +316,8 @@ main { width: min(100%, 1120px); min-width: 0; margin: 0 auto; padding: 64px var
 .platform-status.available i { background: var(--mp-success); }
 .platform-status.maintenance { color: var(--mp-text-weak); }
 .platform-status.maintenance i { background: var(--mp-text-weak); }
-.platform-logo { width: 42px; height: 42px; flex: 0 0 auto; display: grid; place-items: center; border-radius: 11px; color: #fff; background: var(--mp-primary); box-shadow: 0 3px 8px rgb(29 33 41 / 14%); font-size: 15px; font-weight: 700; }
+.platform-logo { width: 42px; height: 42px; flex: 0 0 auto; display: grid; place-items: center; overflow: hidden; border: 1px solid rgb(29 33 41 / 8%); border-radius: 11px; color: #fff; background: #fff; box-shadow: 0 3px 8px rgb(29 33 41 / 12%); font-size: 15px; font-weight: 700; }
+.platform-logo img { width: 100%; height: 100%; display: block; object-fit: cover; }
 .platform-loading { min-height: 100px; display: grid; place-items: center; color: var(--mp-text-weak); border: 1px dashed var(--mp-border-strong); border-radius: var(--mp-radius-md); }
 
 .privacy-section { margin-top: var(--mp-space-8); display: grid; grid-template-columns: 48px minmax(0, 1fr); gap: 18px; padding: var(--mp-space-5); border: 1px solid var(--mp-border); border-radius: var(--mp-radius-lg); background: var(--mp-bg-panel); scroll-margin-top: 88px; }

@@ -1,4 +1,9 @@
 import { CheckCircleOutlined, CloseCircleOutlined, DatabaseOutlined, DeleteOutlined, ExperimentOutlined, FilterOutlined, KeyOutlined, SearchOutlined, StopOutlined } from '@ant-design/icons';
+import {
+  platformFallbackColor,
+  platformFallbackMark,
+  platformIconUrl,
+} from '@media-parser/platform-icons';
 import { Alert, App, Button, Card, Descriptions, Drawer, Empty, Flex, Form, Input, Modal, Select, Space, Switch, Table, Tag, Typography, type TableProps } from 'antd';
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { PageHeader } from '../components/PageHeader';
@@ -160,9 +165,19 @@ export function PlatformsPage(): ReactNode {
   const columns: TableProps<Platform>['columns'] = [
     {
       title: '平台', key: 'platform', width: 250,
-      render: (_: unknown, platform: Platform) => (
-        <div className="platform-name"><span className="platform-mark">{platform.name.slice(0, 2)}</span><div><strong>{platform.name}</strong><Typography.Text type="secondary" code>{platform.id}</Typography.Text><div>{platform.media_types.map((type) => <Tag key={type}>{mediaLabels[type] ?? type}</Tag>)}</div></div></div>
-      ),
+      render: (_: unknown, platform: Platform) => {
+        const iconUrl = platformIconUrl(platform.id);
+        return (
+          <div className="platform-name">
+            <span className="platform-mark" style={iconUrl ? undefined : { background: platformFallbackColor(platform.id) }} aria-hidden="true">
+              {iconUrl
+                ? <img src={iconUrl} alt="" decoding="async" />
+                : platformFallbackMark(platform.name)}
+            </span>
+            <div><strong>{platform.name}</strong><Typography.Text type="secondary" code>{platform.id}</Typography.Text><div>{platform.media_types.map((type) => <Tag key={type}>{mediaLabels[type] ?? type}</Tag>)}</div></div>
+          </div>
+        );
+      },
     },
     {
       title: '状态', dataIndex: 'enabled', width: 130,
