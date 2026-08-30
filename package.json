@@ -1,0 +1,44 @@
+{
+  "name": "media-parser-ts",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24 <25"
+  },
+  "packageManager": "pnpm@11.21.0",
+  "scripts": {
+    "build": "pnpm --recursive --parallel --stream run build",
+    "build:api": "pnpm --filter @media-parser/api build",
+    "build:admin": "pnpm --filter @media-parser/admin build",
+    "build:web": "pnpm --filter @media-parser/web build",
+    "build:server": "pnpm build:api",
+    "build:public": "pnpm build:web",
+    "check": "pnpm lint && pnpm typecheck && pnpm test",
+    "debug": "node --env-file-if-exists=.env --inspect --import tsx api/src/server.ts",
+    "dev": "node --env-file-if-exists=.env --watch --import tsx api/src/server.ts",
+    "dev:api": "pnpm dev",
+    "dev:admin": "pnpm --filter @media-parser/admin dev",
+    "dev:web": "pnpm --filter @media-parser/web dev",
+    "dev:public": "pnpm dev:web",
+    "lint": "eslint .",
+    "start": "node api/dist/server.js",
+    "test": "pnpm --filter @media-parser/api test",
+    "test:watch": "pnpm --filter @media-parser/api test:watch",
+    "test:coverage": "pnpm --filter @media-parser/api test:coverage",
+    "test:live": "pnpm --filter @media-parser/api test:live",
+    "typecheck": "pnpm --recursive --parallel --stream run typecheck"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@types/node": "24.13.3",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.5",
+    "eslint": "10.9.1",
+    "eslint-plugin-security": "4.0.1",
+    "fastify": "5.12.1",
+    "tsx": "4.23.12",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.68.0"
+  }
+}

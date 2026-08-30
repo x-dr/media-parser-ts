@@ -1,0 +1,37 @@
+import type { PlatformId } from '../config/platforms.js';
+
+// Registered public examples from the frozen Python live-sample baseline (2026-08-28).
+// Live execution is only triggered by the explicit admin test endpoint or test:live command.
+export const defaultPlatformSamples: Readonly<Record<PlatformId, string>> = Object.freeze({
+  acfun: 'https://www.acfun.cn/v/ac43445963',
+  soul: 'https://w13.soulsmile.cn/activity/#/web/topic/detail?postIdEcpt=djB4RGYyZGZUYk8vUk9IZDRPMER4dz09&sign=Sk45WDJIbGtlY25YNDRkbTNQd290Y2JmakJvUXV0MDRjSEZ0eEFXUGdXST0&signVersion=0.0.1',
+  quanminkge: 'https://static-play.kg.qq.com/node/on3NDg1SU2/play_v2?s=rv8cHFpUTXw32p0l',
+  jianying: 'https://lv.ulikecam.com/activity/lv/sharevideo?template_id=7631885529415568665&item_type=0',
+  jimeng: 'https://jimeng.jianying.com/s/rdloCrYi2wc/?t=8011',
+  xiaoyunque: 'https://xiaoyunque.jianying.com/s/z_7nWGLGruM/',
+  kling: 'https://klingai-share.kuaishou.com/h5-app/share?work_id=305387532165182&creative_id=305387532165182&creative_type=WORK',
+  bilibili: 'https://www.bilibili.com/video/BV1asTR6FEWu',
+  haokan: 'https://haokan.baidu.com/v?vid=17831460188721240800',
+  xiaohongshu: 'https://www.xiaohongshu.com/discovery/item/6a8fbccc000000002a03825a?xsec_token=ABiWgOL_dtvWThmNa0wejoFAWRt0SZyqbLoyvG0j0ATDg=',
+  wechat_channels: 'https://weixin.qq.com/sph/AzGrUgqzFv',
+  weibo: 'https://video.weibo.com/show?fid=1034:5336219874426938',
+  weishi: 'https://video.weishi.qq.com/5D41bben',
+  kuaishou: 'https://v.m.chenzhongtech.com/fw/photo/3xbr5pi8hxi4e6s',
+  douyin: 'https://www.douyin.com/note/7616399587141737704',
+  xinpianchang: 'https://www.xinpianchang.com/a13792376',
+  zuiyou: 'https://share.xiaochuankeji.cn/hybrid/share/post?pid=423835942',
+  lishipin: 'https://www.pearvideo.com/video_1805408',
+  qsmusic: 'https://qishui.douyin.com/s/iX21ep91/',
+  pipigaoxiao: 'https://h5.pipigx.com/pp/post/815491325984?pid=815491325984&type=post',
+  pipixia: 'https://h5.pipix.com/s/lggjR-ynbpI/',
+  zhihu: 'https://www.zhihu.com/pin/2066168388699807826',
+  lvzhou: 'https://oasis.weibo.cn/v1/h5/share?sid=4641407099208582',
+  meipai: 'http://www.meipai.com/video/533/6777602107506448933',
+  tencent_channel: 'https://pd.qq.com/s/9df0az124?b=2',
+  huya: 'https://hy.fan/v3cwMK',
+  xigua: 'https://www.iesdouyin.com/xg/video/7676450021063735414/',
+  doubao: 'https://www.doubao.com/video-sharing?share_id=41356597786354690&source_type=mobile&video_id=v0d69cg10004d6978e2ljht0i4fdpp00&share_scene=video_viewer',
+  qianwen: 'https://activity.qianwen.com/r/ai-studio-mobile/qwen-external-share?shareId=ZeeOedXncnGlElkluRMA&authorId=OjTAcGHgZgyeCwY4jeMDuH9JkGZ10BNYFM1HfW4CcLhxRA%3D%3D',
+  quark_ai: 'https://act.quark.cn/apps/sharepages/routes/share?biz_id=ai_chat_v2&env=prod&share_id=3aeb87e5f7214ecbb54881903cd02a23',
+  xianyu: 'https://e.tb.cn/h.87fj9SNrqHW8kfC?tk=y1E5Tb4wkGd',
+});

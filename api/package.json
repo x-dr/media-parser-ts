@@ -1,0 +1,37 @@
+{
+  "name": "@media-parser/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "files": [
+    "dist",
+    "openapi"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json && node scripts/copy-build-assets.mjs",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "test:live": "tsx scripts/verify-live.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@fastify/cors": "11.3.0",
+    "@fastify/rate-limit": "11.2.0",
+    "@fastify/static": "^8.3.0",
+    "better-sqlite3": "13.0.3",
+    "cheerio": "1.2.0",
+    "fastify": "5.12.1",
+    "got": "15.1.0",
+    "tough-cookie": "6.0.2",
+    "ulid": "3.0.2"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "9.6.0",
+    "@types/node": "24.13.3",
+    "@vitest/coverage-v8": "4.1.11",
+    "tsx": "4.23.12",
+    "typescript": "6.0.3",
+    "vitest": "4.1.11"
+  }
+}

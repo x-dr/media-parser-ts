@@ -1,0 +1,70 @@
+name: media-parser
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: api/Dockerfile
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      PORT: "8051"
+      DATABASE_PATH: /app/data/media-parser.sqlite
+      ADMIN_BOOTSTRAP_PASSWORD_FILE: /run/secrets/admin_password
+      TRUST_PROXY: "1"
+    secrets:
+      - admin_password
+    volumes:
+      - media-parser-data:/app/data
+    expose:
+      - "8051"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8051/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 3s
+      start_period: 10s
+      retries: 3
+
+  admin:
+    build:
+      context: .
+      dockerfile: admin/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    expose:
+      - "8080"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/healthz"]
+      interval: 30s
+      timeout: 3s
+      start_period: 5s
+      retries: 3
+
+  web:
+    build:
+      context: .
+      dockerfile: web/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+      admin:
+        condition: service_healthy
+    ports:
+      - "${MEDIA_PARSER_PORT:-8051}:8080"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/healthz"]
+      interval: 30s
+      timeout: 3s
+      start_period: 5s
+      retries: 3
+
+secrets:
+  admin_password:
+    file: ${ADMIN_BOOTSTRAP_PASSWORD_SOURCE:-.local/admin-password}
+
+volumes:
+  media-parser-data:

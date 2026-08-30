@@ -1,0 +1,279 @@
+openapi: 3.1.0
+info:
+  title: Media Parser API
+  version: 0.1.0
+  description: Node.js/TypeScript media extraction service. Admin tokens and API keys are separate credentials.
+servers:
+  - url: http://localhost:8051
+paths:
+  /api/health:
+    get:
+      operationId: health
+      responses:
+        '200': { description: Process is alive }
+  /api/ready:
+    get:
+      operationId: ready
+      responses:
+        '200': { description: Database, encryption and all parser registrations are ready }
+        '503': { description: Service is not ready }
+  /api/parse:
+    post:
+      operationId: parseMedia
+      security: [{ apiKey: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [text]
+              properties:
+                text: { type: string, minLength: 1, maxLength: 2000 }
+      responses:
+        '200': { $ref: '#/components/responses/LegacyParseResponse' }
+        '400': { $ref: '#/components/responses/LegacyParseResponse' }
+        '401': { $ref: '#/components/responses/LegacyParseResponse' }
+        '429': { $ref: '#/components/responses/LegacyParseResponse' }
+        '503': { $ref: '#/components/responses/LegacyParseResponse' }
+  /api/platforms:
+    get:
+      operationId: listPublicPlatforms
+      responses:
+        '200':
+          description: Public platform definitions and current enabled state
+  /web-api/status:
+    get:
+      operationId: publicWebStatus
+      responses:
+        '200': { description: Public web readiness without internal configuration details }
+  /web-api/platforms:
+    get:
+      operationId: listPublicWebPlatforms
+      responses:
+        '200': { description: Public platform catalog }
+  /web-api/parse:
+    post:
+      operationId: parseMediaFromPublicWeb
+      description: Same-origin anonymous BFF. The server adds its dedicated API key.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [text]
+              properties:
+                text: { type: string, minLength: 1, maxLength: 2000 }
+      responses:
+        '200': { $ref: '#/components/responses/LegacyParseResponse' }
+        '400': { $ref: '#/components/responses/LegacyParseResponse' }
+        '429': { $ref: '#/components/responses/LegacyParseResponse' }
+        '503': { $ref: '#/components/responses/LegacyParseResponse' }
+  /api/admin/v1/auth/login:
+    post:
+      operationId: adminLogin
+      requestBody: { $ref: '#/components/requestBodies/AdminLogin' }
+      responses:
+        '200': { $ref: '#/components/responses/AdminResponse' }
+        '401': { $ref: '#/components/responses/AdminError' }
+        '429': { $ref: '#/components/responses/AdminError' }
+  /api/admin/v1/auth/refresh:
+    post:
+      operationId: adminRefresh
+      responses: { '200': { $ref: '#/components/responses/AdminResponse' } }
+  /api/admin/v1/auth/logout:
+    post:
+      operationId: adminLogout
+      security: [{ adminToken: [] }]
+      responses: { '200': { $ref: '#/components/responses/AdminResponse' } }
+  /api/admin/v1/auth/me:
+    get:
+      operationId: adminMe
+      security: [{ adminToken: [] }]
+      responses: { '200': { $ref: '#/components/responses/AdminResponse' } }
+  /api/admin/v1/auth/password:
+    put:
+      operationId: adminChangePassword
+      security: [{ adminToken: [] }]
+      responses: { '200': { $ref: '#/components/responses/AdminResponse' } }
+  /api/admin/v1/clients:
+    get:
+      operationId: listClients
+      security: [{ adminToken: [] }]
+      responses: { '200': { $ref: '#/components/responses/AdminResponse' } }
+    post:
+      operationId: createClient
+      security: [{ adminToken: [] }]
+      responses: { '200': { $ref: '#/components/responses/AdminResponse' } }
+  /api/admin/v1/clients/{clientId}:
+    parameters: [{ $ref: '#/components/parameters/ClientId' }]
+    get:
+      operationId: getClient
+      security: [{ adminToken: [] }]
+      responses: { '200': { $ref: '#/components/responses/AdminResponse' } }
+    patch:
+      operationId: updateClient
+      security: [{ adminToken: [] }]
+      responses: { '200': { $ref: '#/components/responses/AdminResponse' } }
+  /api/admin/v1/clients/{clientId}/keys:
+    parameters: [{ $ref: '#/components/parameters/ClientId' }]
+    get:
+      operationId: listClientKeys
+      security: [{ adminToken: [] }]
+      responses: { '200': { $ref: '#/components/responses/AdminResponse' } }
+    post:
+      operationId: createClientKey
+      description: The complete API key is returned by this operation only once.
+      security: [{ adminToken: [] }]
+      responses: { '200': { $ref: '#/components/responses/AdminResponse' } }
+  /api/admin/v1/keys/{keyId}:
+    parameters: [{ $ref: '#/components/parameters/KeyId' }]
+    patch:
+      operationId: updateKey
+      security: [{ adminToken: [] }]
+      responses: { '200': { $ref: '#/components/responses/AdminResponse' } }
+  /api/admin/v1/keys/{keyId}/revoke:
+    parameters: [{ $ref: '#/components/parameters/KeyId' }]
+    post:
+      operationId: revokeKey
+      security: [{ adminToken: [] }]
+      responses: { '200': { $ref: '#/components/responses/AdminResponse' } }
+  /api/admin/v1/platforms:
+    get:
+      operationId: listPlatforms
+      security: [{ adminToken: [] }]
+      responses: { '200': { $ref: '#/components/responses/AdminResponse' } }
+  /api/admin/v1/platforms/{platformId}:
+    parameters: [{ $ref: '#/components/parameters/PlatformId' }]
+    patch:
+      operationId: updatePlatform
+      security: [{ adminToken: [] }]
+      responses: { '200': { $ref: '#/components/responses/AdminResponse' } }
+  /api/admin/v1/platforms/{platformId}/credentials/{credentialName}:
+    parameters:
+      - { $ref: '#/components/parameters/PlatformId' }
+      - { name: credentialName, in: path, required: true, schema: { type: string } }
+    put:
+      operationId: setPlatformCredential
+      description: Credential values are encrypted at rest and never returned.
+      security: [{ adminToken: [] }]
+      responses: { '200': { $ref: '#/components/responses/AdminResponse' } }
+    delete:
+      operationId: deletePlatformCredential
+      security: [{ adminToken: [] }]
+      responses: { '200': { $ref: '#/components/responses/AdminResponse' } }
+  /api/admin/v1/platforms/{platformId}/test:
+    parameters: [{ $ref: '#/components/parameters/PlatformId' }]
+    post:
+      operationId: testPlatform
+      description: Globally serialized controlled live test with a 60 second per-platform cooldown.
+      security: [{ adminToken: [] }]
+      responses:
+        '200': { $ref: '#/components/responses/AdminResponse' }
+        '409': { $ref: '#/components/responses/AdminError' }
+        '429': { $ref: '#/components/responses/AdminError' }
+  /api/admin/v1/logs:
+    get:
+      operationId: listLogs
+      security: [{ adminToken: [] }]
+      responses: { '200': { $ref: '#/components/responses/AdminResponse' } }
+  /api/admin/v1/logs/export:
+    get:
+      operationId: exportLogs
+      security: [{ adminToken: [] }]
+      responses:
+        '200':
+          description: Streaming newline-delimited JSON
+          content: { application/x-ndjson: { schema: { type: string } } }
+  /api/admin/v1/logs/{logId}:
+    parameters: [{ name: logId, in: path, required: true, schema: { type: string } }]
+    get:
+      operationId: getLog
+      security: [{ adminToken: [] }]
+      responses: { '200': { $ref: '#/components/responses/AdminResponse' } }
+  /api/admin/v1/stats/overview:
+    get:
+      operationId: statsOverview
+      security: [{ adminToken: [] }]
+      responses: { '200': { $ref: '#/components/responses/AdminResponse' } }
+  /api/admin/v1/stats/platforms:
+    get:
+      operationId: statsPlatforms
+      security: [{ adminToken: [] }]
+      responses: { '200': { $ref: '#/components/responses/AdminResponse' } }
+  /api/admin/v1/stats/clients:
+    get:
+      operationId: statsClients
+      security: [{ adminToken: [] }]
+      responses: { '200': { $ref: '#/components/responses/AdminResponse' } }
+components:
+  securitySchemes:
+    apiKey: { type: http, scheme: bearer, bearerFormat: 'mp_<key-id>_<secret>' }
+    adminToken: { type: http, scheme: bearer, bearerFormat: ma_access }
+  parameters:
+    ClientId: { name: clientId, in: path, required: true, schema: { type: string } }
+    KeyId: { name: keyId, in: path, required: true, schema: { type: string } }
+    PlatformId: { name: platformId, in: path, required: true, schema: { type: string } }
+  requestBodies:
+    AdminLogin:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [username, password]
+            properties:
+              username: { type: string }
+              password: { type: string, format: password }
+  responses:
+    LegacyParseResponse:
+      description: Legacy-compatible parse envelope
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/LegacyEnvelope' }
+    AdminResponse:
+      description: Admin API success envelope
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [data, request_id]
+            properties:
+              data: {}
+              request_id: { type: string }
+    AdminError:
+      description: Admin API error envelope
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [error, request_id]
+            properties:
+              error:
+                type: object
+                required: [code, message]
+                properties:
+                  code: { type: string }
+                  message: { type: string }
+              request_id: { type: string }
+  schemas:
+    LegacyEnvelope:
+      oneOf:
+        - type: object
+          required: [retcode, retdesc, data, succ]
+          properties:
+            retcode: { const: 200 }
+            retdesc: { const: 成功 }
+            data: { type: object }
+            succ: { const: true }
+        - type: object
+          required: [retcode, retdesc, data, succ, error_code]
+          properties:
+            retcode: { type: integer }
+            retdesc: { type: string }
+            data: { type: 'null' }
+            succ: { const: false }
+            error_code: { type: string }
