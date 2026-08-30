@@ -1,8 +1,7 @@
 import { lazy, Suspense } from 'react';
-import { Alert, Button, Empty, Tag } from 'antd';
+import { Alert, Button, Tag } from 'antd';
 import {
   CopyOutlined,
-  FileImageOutlined,
   ReloadOutlined,
 } from '@ant-design/icons';
 import type { ParseFailure, ResultState } from '../types';
@@ -17,8 +16,8 @@ interface ResultPanelProps {
 export function ResultPanel({ state, onRetry }: ResultPanelProps) {
   return (
     <section className="workspace-panel result-panel" aria-labelledby="result-title">
-      <div className="section-number result-heading">
-        <div><span>02 /</span><h2 id="result-title">解析结果</h2></div>
+      <div className="result-heading">
+        <h2 className="panel-title" id="result-title">解析结果</h2>
         {state.kind === 'success' && (
           <div className="result-metrics">
             <Tag color="success">HTTP {state.response.retcode}</Tag>
@@ -27,7 +26,6 @@ export function ResultPanel({ state, onRetry }: ResultPanelProps) {
         )}
       </div>
       <div className="result-content" aria-live="polite">
-        {state.kind === 'empty' && <EmptyResult />}
         {state.kind === 'loading' && <LoadingResult longWait={state.longWait} />}
         {state.kind === 'cancelled' && <CancelledResult onRetry={onRetry} />}
         {state.kind === 'error' && (
@@ -40,21 +38,6 @@ export function ResultPanel({ state, onRetry }: ResultPanelProps) {
         )}
       </div>
     </section>
-  );
-}
-
-function EmptyResult() {
-  return (
-    <Empty
-      className="result-empty"
-      image={<div className="empty-media-art" aria-hidden="true"><FileImageOutlined /></div>}
-      description={(
-        <div>
-          <strong>解析结果将在这里展开</strong>
-          <p>成功后可预览视频、音频、封面、图集与字幕。</p>
-        </div>
-      )}
-    />
   );
 }
 

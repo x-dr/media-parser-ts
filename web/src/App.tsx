@@ -96,21 +96,28 @@ export function App() {
       locale={zhCN}
       theme={{
         token: {
-          colorPrimary: '#e85d35',
-          colorSuccess: '#167a59',
-          colorWarning: '#b86a12',
-          colorError: '#b83a3a',
-          colorText: '#18211d',
-          colorTextSecondary: '#68736d',
-          colorBorder: '#d9ded7',
-          borderRadius: 12,
-          controlHeightLG: 48,
-          fontFamily: 'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+          colorPrimary: '#6c4de6',
+          colorInfo: '#6c4de6',
+          colorLink: '#6c4de6',
+          colorSuccess: '#1ba97c',
+          colorWarning: '#b87503',
+          colorError: '#d93026',
+          colorText: '#1d2129',
+          colorTextSecondary: '#4e5562',
+          colorTextTertiary: '#8a919e',
+          colorBorder: '#e5e8ec',
+          colorBorderSecondary: '#eef0f3',
+          colorBgLayout: '#f7f8fa',
+          borderRadius: 8,
+          controlHeightLG: 46,
+          fontFamily: '"PingFang SC", Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif',
         },
         components: {
-          Button: { primaryShadow: '0 10px 24px rgb(232 93 53 / 20%)' },
-          Input: { activeShadow: '0 0 0 3px rgb(232 93 53 / 14%)' },
+          Button: { primaryShadow: '0 6px 16px rgb(108 77 230 / 30%)', fontWeight: 500 },
+          Input: { activeShadow: '0 0 0 3px rgb(108 77 230 / 14%)', borderRadius: 10 },
           Collapse: { headerBg: '#fff', contentBg: '#fff' },
+          Tag: { borderRadiusSM: 6 },
+          Alert: { borderRadiusLG: 10 },
         },
       }}
     >
@@ -133,7 +140,7 @@ export function App() {
                 onSubmit={() => void handleSubmit()}
                 onCancel={handleCancel}
               />
-              <ResultPanel state={result} onRetry={handleRetry} />
+              {result.kind !== 'empty' && <ResultPanel state={result} onRetry={handleRetry} />}
             </div>
             <PlatformGrid platforms={platforms} loading={platformsLoading} />
             <PrivacySection />

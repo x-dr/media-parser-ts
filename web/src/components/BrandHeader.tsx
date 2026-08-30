@@ -19,25 +19,27 @@ const statusCopy: Record<ServiceState, string> = {
 export function BrandHeader({ serviceState, platformCount, onRefresh }: BrandHeaderProps) {
   return (
     <header className="site-header">
-      <a className="brand" href="#top" aria-label="Media Parser 首页">
-        <span className="brand-mark">MP</span>
-        <span className="brand-copy">
-          <strong>Media Parser</strong>
-          <span>匿名媒体解析工具</span>
-        </span>
-      </a>
-      <nav className="header-actions" aria-label="页面导航">
-        <span className={`service-status status-${serviceState}`} role="status" aria-live="polite">
-          <i aria-hidden="true" />
-          {statusCopy[serviceState]}
-        </span>
-        <Button type="text" icon={<ReloadOutlined />} onClick={onRefresh} loading={serviceState === 'checking'}>
-          重新检查
-        </Button>
-        <a href="#platforms">
-          支持平台{platformCount > 0 ? ` ${platformCount}` : ''}
+      <div className="site-header-inner">
+        <a className="brand" href="#top" aria-label="Media Parser 首页">
+          <span className="brand-mark">MP</span>
+          <span className="brand-copy">
+            <strong>Media Parser</strong>
+            <span>匿名媒体解析工具</span>
+          </span>
         </a>
-      </nav>
+        <nav className="header-actions" aria-label="页面导航">
+          <span className={`service-status status-${serviceState}`} role="status" aria-live="polite">
+            <i aria-hidden="true" />
+            {statusCopy[serviceState]}
+          </span>
+          <Button type="text" icon={<ReloadOutlined />} onClick={onRefresh} loading={serviceState === 'checking'}>
+            重新检查
+          </Button>
+          <a href="#platforms">
+            支持平台{platformCount > 0 ? ` ${platformCount}` : ''}
+          </a>
+        </nav>
+      </div>
     </header>
   );
 }

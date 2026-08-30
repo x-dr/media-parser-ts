@@ -33,9 +33,36 @@ export function formatSubtitleTime(subtitle: Subtitle): string | null {
 
 export function platformMark(name: string): string {
   const latin = /[A-Za-z]+/u.exec(name)?.[0];
-  if (latin) return latin.slice(0, 2).toUpperCase();
+  if (latin) return latin.slice(0, 1).toUpperCase();
   const segments = new Intl.Segmenter('zh-CN', { granularity: 'grapheme' }).segment(name);
-  return Array.from(segments, ({ segment }) => segment).slice(0, 2).join('');
+  return Array.from(segments, ({ segment }) => segment).slice(0, 1).join('');
+}
+
+const brandPalette: ReadonlyArray<readonly [RegExp, string]> = [
+  [/抖音|douyin|tiktok/iu, '#161823'],
+  [/小红书|redbook|xhs|xiaohongshu/iu, '#ff2442'],
+  [/快手|kuaishou/iu, '#ff6a06'],
+  [/哔哩|bilibili|b站/iu, '#fb7299'],
+  [/微信|视频号|wechat|weixin/iu, '#07c160'],
+  [/微博|weibo/iu, '#e6162d'],
+  [/知乎|zhihu/iu, '#0066ff'],
+  [/西瓜|xigua/iu, '#ff4b2b'],
+  [/剪映|jianying|capcut/iu, '#0fb9b1'],
+  [/即梦|jimeng/iu, '#7b5cff'],
+  [/豆包|doubao/iu, '#335cff'],
+  [/皮皮虾|pipix/iu, '#ffb300'],
+  [/好看|haokan/iu, '#3b6ff0'],
+  [/头条|toutiao/iu, '#f04142'],
+  [/youtube/iu, '#ff0033'],
+  [/instagram/iu, '#d62976'],
+  [/twitter|推特/iu, '#14171a'],
+];
+
+export function platformBrand(name: string): string {
+  for (const [pattern, color] of brandPalette) {
+    if (pattern.test(name)) return color;
+  }
+  return '#6c4de6';
 }
 
 function normalizeImage(item: string | LiveImage): NormalizedImage {

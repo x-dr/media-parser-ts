@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Alert, Avatar, Button, Collapse, Image, Tag } from 'antd';
 import {
   AudioOutlined,
+  CheckCircleFilled,
   CodeOutlined,
   CopyOutlined,
   FileImageOutlined,
@@ -9,6 +10,7 @@ import {
   PictureOutlined,
   PlayCircleOutlined,
   UserOutlined,
+  VideoCameraOutlined,
 } from '@ant-design/icons';
 import type { CollapseProps } from 'antd';
 import type { ParseSuccess } from '../types';
@@ -59,64 +61,95 @@ export function MediaResultView({ response }: MediaResultViewProps) {
 
   return (
     <article className="media-result">
-      <div className="media-summary">
-        <Tag className="platform-badge">{data.platform || '未知平台'}</Tag>
-        <h3>{data.title?.trim() || '未提供标题'}</h3>
-        {data.author && (data.author.nickname || avatar) && (
-          <div className="author-row">
-            <Avatar size={36} src={avatar ?? undefined} icon={<UserOutlined />} alt={data.author.nickname || '作者头像'} />
-            <div>
-              <strong>{data.author.nickname || '未提供作者名'}</strong>
-              {data.author.author_id && <span>{data.author.author_id}</span>}
-            </div>
+      <div className="media-layout">
+        <div className="media-preview" aria-label="媒体预览">
+          {currentVideo ? (
+            <video
+              key={currentVideo}
+              controls
+              preload="metadata"
+              poster={cover ?? undefined}
+              src={currentVideo}
+              onError={() => setPreviewFailed(true)}
+              onLoadedMetadata={() => setPreviewFailed(false)}
+            >
+              你的浏览器不支持视频播放。
+            </video>
+          ) : cover ? (
+            <Image src={cover} alt="媒体封面" fallback="" />
+          ) : (
+            <div className="media-preview-empty"><FileImageOutlined /></div>
+          )}
+          {!currentVideo && images.length > 0 && (
+            <span className="media-count-badge"><PictureOutlined />{images.length} 张图文</span>
+          )}
+        </div>
+        <div className="media-info">
+          <div className="media-tags">
+            <Tag color="purple">{data.platform || '未知平台'}</Tag>
+            <Tag color="success"><CheckCircleFilled />解析成功</Tag>
           </div>
-        )}
+          {data.author && (data.author.nickname || avatar) && (
+            <div className="author-row">
+              <Avatar size={36} src={avatar ?? undefined} icon={<UserOutlined />} alt={data.author.nickname || '作者头像'} />
+              <div>
+                <strong>{data.author.nickname || '未提供作者名'}</strong>
+                {data.author.author_id && <span>ID: {data.author.author_id}</span>}
+              </div>
+            </div>
+          )}
+          <h3>{data.title?.trim() || '未提供标题'}</h3>
+          <div className="media-actions">
+            {currentVideo && (
+              <Button
+                type="primary"
+                size="large"
+                icon={<VideoCameraOutlined />}
+                href={currentVideo}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                查看 / 下载无水印视频
+              </Button>
+            )}
+            {cover && (
+              <Button
+                size="large"
+                icon={<FileImageOutlined />}
+                href={cover}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                查看 / 下载高清封面
+              </Button>
+            )}
+          </div>
+        </div>
       </div>
 
-      {currentVideo && (
-        <section className="video-section" aria-label="视频资源">
-          <video
-            key={currentVideo}
-            controls
-            preload="metadata"
-            poster={cover ?? undefined}
-            src={currentVideo}
-            onError={() => setPreviewFailed(true)}
-            onLoadedMetadata={() => setPreviewFailed(false)}
-          >
-            你的浏览器不支持视频播放。
-          </video>
-          {previewFailed && (
-            <Alert
-              type="warning"
-              showIcon
-              title="解析已经成功，但浏览器无法直接预览此资源。"
-            />
-          )}
-          {videos.length > 1 && (
-            <div className="video-switcher" aria-label="切换视频资源">
-              {videos.map((url, index) => (
-                <Button
-                  key={url}
-                  size="small"
-                  type={index === activeVideo ? 'primary' : 'default'}
-                  onClick={() => {
-                    setActiveVideo(index);
-                    setPreviewFailed(false);
-                  }}
-                >
-                  视频 {index + 1}
-                </Button>
-              ))}
-            </div>
-          )}
-          <ExternalResource url={currentVideo} label={`视频资源 ${activeVideo + 1}`} />
-        </section>
+      {currentVideo && previewFailed && (
+        <Alert
+          className="media-preview-fail"
+          type="warning"
+          showIcon
+          title="解析已经成功，但浏览器无法直接预览此资源。"
+        />
       )}
-
-      {!currentVideo && cover && (
-        <div className="cover-only">
-          <Image src={cover} alt="媒体封面" fallback="" />
+      {videos.length > 1 && (
+        <div className="video-switcher" aria-label="切换视频资源">
+          {videos.map((url, index) => (
+            <Button
+              key={url}
+              size="small"
+              type={index === activeVideo ? 'primary' : 'default'}
+              onClick={() => {
+                setActiveVideo(index);
+                setPreviewFailed(false);
+              }}
+            >
+              视频 {index + 1}
+            </Button>
+          ))}
         </div>
       )}
 
