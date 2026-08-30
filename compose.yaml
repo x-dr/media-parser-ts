@@ -2,6 +2,7 @@ name: media-parser
 
 services:
   api:
+    image: "${MEDIA_PARSER_API_IMAGE:-ghcr.io/x-dr/media-parser-ts-api:latest}"
     build:
       context: .
       dockerfile: api/Dockerfile
@@ -27,6 +28,7 @@ services:
       retries: 3
 
   admin:
+    image: "${MEDIA_PARSER_ADMIN_IMAGE:-ghcr.io/x-dr/media-parser-ts-admin:latest}"
     build:
       context: .
       dockerfile: admin/Dockerfile
@@ -44,6 +46,7 @@ services:
       retries: 3
 
   web:
+    image: "${MEDIA_PARSER_WEB_IMAGE:-ghcr.io/x-dr/media-parser-ts-web:latest}"
     build:
       context: .
       dockerfile: web/Dockerfile

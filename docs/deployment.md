@@ -57,6 +57,9 @@ openssl rand -base64 32
 ```dotenv
 MEDIA_PARSER_BIND_ADDRESS=127.0.0.1
 MEDIA_PARSER_PORT=8051
+MEDIA_PARSER_API_IMAGE=ghcr.io/x-dr/media-parser-ts-api:latest
+MEDIA_PARSER_ADMIN_IMAGE=ghcr.io/x-dr/media-parser-ts-admin:latest
+MEDIA_PARSER_WEB_IMAGE=ghcr.io/x-dr/media-parser-ts-web:latest
 ADMIN_BOOTSTRAP_USERNAME=admin
 ADMIN_BOOTSTRAP_PASSWORD_SOURCE=.local/admin-password
 APP_ENCRYPTION_KEY=<Base64 编码的 32 字节随机密钥>
@@ -72,6 +75,9 @@ PUBLIC_WEB_API_KEY=
 | --- | --- | --- | --- |
 | `MEDIA_PARSER_BIND_ADDRESS` | `127.0.0.1` | Compose 发布地址；宿主 Nginx 部署应保持回环地址 | 仅用于 Compose 插值 |
 | `MEDIA_PARSER_PORT` | `8051` | Compose 发布到宿主机的端口 | 仅用于 Compose 插值 |
+| `MEDIA_PARSER_API_IMAGE` | `ghcr.io/x-dr/media-parser-ts-api:latest` | API 镜像；生产环境建议固定版本或 `sha-*` 标签 | 仅用于 Compose 插值 |
+| `MEDIA_PARSER_ADMIN_IMAGE` | `ghcr.io/x-dr/media-parser-ts-admin:latest` | 管理后台镜像；应与 API 使用同一发布版本 | 仅用于 Compose 插值 |
+| `MEDIA_PARSER_WEB_IMAGE` | `ghcr.io/x-dr/media-parser-ts-web:latest` | 公开站镜像；应与 API 使用同一发布版本 | 仅用于 Compose 插值 |
 | `PORT` | `8051` | API 监听端口，范围 `1–65535` | Compose 固定为 `8051` |
 | `LOG_LEVEL` | `info` | `fatal/error/warn/info/debug/trace/silent` | 传入 API |
 | `DATABASE_PATH` | `/app/data/media-parser.sqlite` | SQLite 文件路径；宿主开发建议 `.local/media-parser.sqlite` | Compose 固定为命名卷中的该路径 |
@@ -102,10 +108,13 @@ PUBLIC_WEB_API_KEY=
 
 ```bash
 docker compose config
-docker compose up --detach --build
+docker compose pull
+docker compose up --detach
 docker compose ps
 docker compose logs --tail=100 api
 ```
+
+以上命令默认拉取 `ghcr.io/x-dr/media-parser-ts-{api,admin,web}:latest`。为便于回滚，生产环境建议把 `.env` 中三个镜像地址固定为同一次发布的版本标签或 `sha-*` 标签。本地源码构建可改用 `docker compose up --detach --build`。
 
 先从宿主机检查仅回环可达的入口：
 
@@ -186,11 +195,10 @@ docker compose logs --follow --tail=200 api
 docker compose logs --follow --tail=100 web admin
 ```
 
-更新代码并滚动重建：
+更新镜像并重新创建容器：
 
 ```bash
-git pull --ff-only
-docker compose build --pull
+docker compose pull
 docker compose up --detach
 docker compose ps
 ```

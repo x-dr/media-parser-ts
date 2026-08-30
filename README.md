@@ -113,12 +113,21 @@ TRUST_PROXY=2
 
 `APP_ENCRYPTION_KEY` 用于加密平台凭据，必须由可信的密码管理器或系统密钥工具生成并长期安全保存。不要提交 `.env`、密码文件、Cookie、API Key 或 SQLite 数据库。
 
-### 2. 构建并启动
+### 2. 拉取镜像并启动
 
 ```bash
-docker compose up --detach --build
+docker compose pull
+docker compose up --detach
 docker compose ps
 ```
+
+Compose 默认使用以下 GHCR 镜像；如需固定版本，可在 `.env` 中把对应地址的 `latest` 改成版本或 `sha-*` 标签：
+
+- `ghcr.io/x-dr/media-parser-ts-api:latest`
+- `ghcr.io/x-dr/media-parser-ts-admin:latest`
+- `ghcr.io/x-dr/media-parser-ts-web:latest`
+
+本地修改代码后仍可使用 `docker compose up --detach --build` 构建并启动。
 
 默认入口仅绑定 `http://127.0.0.1:8051`，应由同一宿主机的 Nginx 对外提供 HTTPS：
 
@@ -140,9 +149,9 @@ curl --fail http://127.0.0.1:8051/api/ready
 
 仓库内的 `.github/workflows/container-images.yml` 会先检查误提交的常见敏感文件和密钥格式，再并行构建 API、Admin、Web 三个 `linux/amd64` 与 `linux/arm64` 镜像：
 
-- `ghcr.io/<owner>/<repo>-api`
-- `ghcr.io/<owner>/<repo>-admin`
-- `ghcr.io/<owner>/<repo>-web`
+- `ghcr.io/x-dr/media-parser-ts-api`
+- `ghcr.io/x-dr/media-parser-ts-admin`
+- `ghcr.io/x-dr/media-parser-ts-web`
 
 Pull Request 只验证构建，不推送镜像；推送到 `main`、推送 `v*` 版本标签或手动运行工作流时，会使用仓库自带的 `GITHUB_TOKEN` 发布到 GHCR，不需要另存用户名或 Registry Token。镜像包含分支、语义化版本和提交 SHA 标签，并生成 provenance 与 SBOM。
 
