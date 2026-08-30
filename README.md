@@ -131,6 +131,16 @@ curl --fail http://127.0.0.1:8051/api/ready
 
 `/api/health` 只表示进程存活；`/api/ready` 还会检查数据库、迁移、加密密钥和全部 Parser 注册。
 
+### GitHub Actions 镜像
+
+仓库内的 `.github/workflows/container-images.yml` 会先检查误提交的常见敏感文件和密钥格式，再并行构建 API、Admin、Web 三个 `linux/amd64` 与 `linux/arm64` 镜像：
+
+- `ghcr.io/<owner>/<repo>-api`
+- `ghcr.io/<owner>/<repo>-admin`
+- `ghcr.io/<owner>/<repo>-web`
+
+Pull Request 只验证构建，不推送镜像；推送到 `main`、推送 `v*` 版本标签或手动运行工作流时，会使用仓库自带的 `GITHUB_TOKEN` 发布到 GHCR，不需要另存用户名或 Registry Token。镜像包含分支、语义化版本和提交 SHA 标签，并生成 provenance 与 SBOM。
+
 ### 3. 初始化公开解析页
 
 首次登录管理后台时，使用 `.env` 中的管理员用户名和 `.local/admin-password` 中的初始密码。系统会要求立即修改初始密码。

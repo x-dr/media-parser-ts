@@ -1,10 +1,27 @@
+# Dependencies and generated output
 node_modules/
 **/dist/
 coverage/
+
+# Local configuration and credentials
 .env
+.env.*
+!.env.example
 .local/
+.secrets/
+secrets/
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Runtime data
 *.sqlite
 *.sqlite-shm
 *.sqlite-wal
 data/
-.codebuddy
+
+# Local agent state
+.agents/
+.codex/
+.codebuddy/
