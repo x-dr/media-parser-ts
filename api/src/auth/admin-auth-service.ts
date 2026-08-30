@@ -1,4 +1,3 @@
-import { readFile } from 'node:fs/promises';
 import { ulid } from 'ulid';
 import type { AppConfig } from '../config/env.js';
 import {
@@ -49,15 +48,11 @@ export class AdminAuthService {
 
   public async initialize(): Promise<void> {
     if (this.repository.findAdmin()) return;
-    if (!this.config.adminBootstrapUsername || !this.config.adminBootstrapPasswordFile) {
+    if (!this.config.adminBootstrapUsername || !this.config.adminBootstrapPassword) {
       throw new Error('数据库中没有管理员，且缺少管理员引导凭据');
     }
     const username = normalizeUsername(this.config.adminBootstrapUsername);
-    // The operator explicitly configures this secret-file path at startup.
-    // eslint-disable-next-line security/detect-non-literal-fs-filename
-    const fileContent = await readFile(this.config.adminBootstrapPasswordFile, 'utf8');
-    const password = fileContent.replace(/\r?\n$/u, '');
-    const digest = await hashPassword(password);
+    const digest = await hashPassword(this.config.adminBootstrapPassword);
     const now = new Date().toISOString();
     this.repository.createAdmin({
       id: ulid(),

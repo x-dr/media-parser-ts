@@ -13,7 +13,7 @@ export interface AppConfig {
   globalParseConcurrency: number;
   logRetentionDays: number;
   adminBootstrapUsername: string | null;
-  adminBootstrapPasswordFile: string | null;
+  adminBootstrapPassword: string | null;
   encryptionKey: Buffer | null;
   previousEncryptionKey: Buffer | null;
   corsOrigins: readonly string[];
@@ -106,6 +106,11 @@ function optionalSecret(source: NodeJS.ProcessEnv, name: string): string | null 
   return source[name]?.trim() || null;
 }
 
+function optionalPassword(source: NodeJS.ProcessEnv, name: string): string | null {
+  const value = source[name];
+  return value === undefined || value.length === 0 ? null : value;
+}
+
 export function loadConfig(source: NodeJS.ProcessEnv = process.env): AppConfig {
   const level = (source.LOG_LEVEL?.trim() || 'info') as LogLevel;
   if (!LOG_LEVELS.has(level)) throw new Error('LOG_LEVEL 无效');
@@ -125,7 +130,7 @@ export function loadConfig(source: NodeJS.ProcessEnv = process.env): AppConfig {
     globalParseConcurrency: integer(source, 'GLOBAL_PARSE_CONCURRENCY', 20, 1, 1_000),
     logRetentionDays: integer(source, 'LOG_RETENTION_DAYS', 30, 1, 365),
     adminBootstrapUsername: source.ADMIN_BOOTSTRAP_USERNAME?.trim() || null,
-    adminBootstrapPasswordFile: source.ADMIN_BOOTSTRAP_PASSWORD_FILE?.trim() || null,
+    adminBootstrapPassword: optionalPassword(source, 'ADMIN_BOOTSTRAP_PASSWORD'),
     encryptionKey: encryptionKey(source, 'APP_ENCRYPTION_KEY'),
     previousEncryptionKey: encryptionKey(source, 'APP_ENCRYPTION_KEY_PREVIOUS'),
     corsOrigins: corsOrigins(source),

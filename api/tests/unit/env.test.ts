@@ -5,11 +5,15 @@ import { loadConfig } from '../../src/config/env.js';
 describe('loadConfig', () => {
   it('parses safe defaults and a 32-byte encryption key', () => {
     const key = randomBytes(32).toString('base64');
-    const config = loadConfig({ APP_ENCRYPTION_KEY: key });
+    const config = loadConfig({
+      APP_ENCRYPTION_KEY: key,
+      ADMIN_BOOTSTRAP_PASSWORD: ' initial-password-123 ',
+    });
     expect(config.port).toBe(8051);
     expect(config.encryptionKey).toHaveLength(32);
     expect(config.trustProxy).toBe(false);
     expect(config.publicWebConcurrency).toBe(8);
+    expect(config.adminBootstrapPassword).toBe(' initial-password-123 ');
   });
 
   it('rejects malformed security configuration', () => {

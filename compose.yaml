@@ -12,10 +12,7 @@ services:
     environment:
       PORT: "8051"
       DATABASE_PATH: /app/data/media-parser.sqlite
-      ADMIN_BOOTSTRAP_PASSWORD_FILE: /run/secrets/admin_password
       TRUST_PROXY: "${TRUST_PROXY:-1}"
-    secrets:
-      - admin_password
     volumes:
       - media-parser-data:/app/data
     expose:
@@ -64,10 +61,6 @@ services:
       timeout: 3s
       start_period: 5s
       retries: 3
-
-secrets:
-  admin_password:
-    file: ${ADMIN_BOOTSTRAP_PASSWORD_SOURCE:-.local/admin-password}
 
 volumes:
   media-parser-data:

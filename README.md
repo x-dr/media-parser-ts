@@ -96,22 +96,22 @@ cd media-parser-ts
 cp .env.example .env
 umask 077
 mkdir -p .local
-touch .local/admin-password
 chmod 700 .local
-chmod 600 .env .local/admin-password
+chmod 600 .env
 ```
 
-编辑 `.local/admin-password`，写入一行 12–128 个字符的强初始密码；再编辑 `.env`，至少配置：
+编辑 `.env`，至少配置：
 
 ```dotenv
 ADMIN_BOOTSTRAP_USERNAME=admin
+ADMIN_BOOTSTRAP_PASSWORD=<12–128 个字符的强初始密码>
 APP_ENCRYPTION_KEY=<Base64 编码的 32 字节随机密钥>
 PUBLIC_WEB_API_KEY=
 MEDIA_PARSER_BIND_ADDRESS=127.0.0.1
 TRUST_PROXY=2
 ```
 
-`APP_ENCRYPTION_KEY` 用于加密平台凭据，必须由可信的密码管理器或系统密钥工具生成并长期安全保存。不要提交 `.env`、密码文件、Cookie、API Key 或 SQLite 数据库。
+`APP_ENCRYPTION_KEY` 用于加密平台凭据，必须由可信的密码管理器或系统密钥工具生成并长期安全保存。不要提交 `.env`、Cookie、API Key 或 SQLite 数据库。
 
 ### 2. 拉取镜像并启动
 
@@ -157,7 +157,7 @@ Pull Request 只验证构建，不推送镜像；推送到 `main`、推送 `v*` 
 
 ### 3. 初始化公开解析页
 
-首次登录管理后台时，使用 `.env` 中的管理员用户名和 `.local/admin-password` 中的初始密码。系统会要求立即修改初始密码。
+首次登录管理后台时，使用 `.env` 中的管理员用户名和初始密码。系统会要求立即修改初始密码。
 
 随后在后台完成以下操作：
 
@@ -291,11 +291,11 @@ PORT=8051
 LOG_LEVEL=debug
 DATABASE_PATH=.local/media-parser.sqlite
 ADMIN_BOOTSTRAP_USERNAME=admin
-ADMIN_BOOTSTRAP_PASSWORD_FILE=.local/admin-password
+ADMIN_BOOTSTRAP_PASSWORD=<12–128 个字符的强初始密码>
 APP_ENCRYPTION_KEY=<Base64 编码的 32 字节随机密钥>
 ```
 
-开发命令会自动读取根目录 `.env`。首次数据库初始化后，环境变量不会覆盖已有管理员；管理员初始密码文件仍应保持 `0600` 权限。
+开发和启动命令会自动读取根目录 `.env`。首次数据库初始化后，环境变量不会覆盖已有管理员；`.env` 应保持 `0600` 权限。
 
 ### 启动服务
 
@@ -383,8 +383,7 @@ media-parser-ts/
 | `PUBLIC_WEB_RATE_LIMIT_PER_MINUTE` | `6` | 每个可信访客 IP 每分钟请求数 |
 | `LOG_RETENTION_DAYS` | `30` | 调用日志保留天数 |
 | `ADMIN_BOOTSTRAP_USERNAME` | 无 | 仅首次建库时创建管理员 |
-| `ADMIN_BOOTSTRAP_PASSWORD_FILE` | 无 | 初始密码文件路径，不是密码本身 |
-| `ADMIN_BOOTSTRAP_PASSWORD_SOURCE` | `.local/admin-password` | Compose secret 的宿主源文件 |
+| `ADMIN_BOOTSTRAP_PASSWORD` | 无 | 仅首次建库时使用的初始密码，12–128 个字符 |
 | `APP_ENCRYPTION_KEY` | 无 | 当前 Base64 32 字节平台凭据密钥 |
 | `APP_ENCRYPTION_KEY_PREVIOUS` | 无 | 密钥轮换期间用于解密旧数据 |
 | `CORS_ORIGINS` | 空 | 逗号分隔的精确 HTTP(S) Origin，不支持通配符 |
@@ -400,9 +399,9 @@ media-parser-ts/
 
 ## 常见问题
 
-### 启动时报管理员不存在或密码文件不可读
+### 启动时报缺少管理员引导凭据
 
-首次建库必须同时配置 `ADMIN_BOOTSTRAP_USERNAME` 和可读的 `ADMIN_BOOTSTRAP_PASSWORD_FILE`。Compose 会把 `.local/admin-password` 挂载到 `/run/secrets/admin_password`；宿主开发必须把容器路径改成 `.local/admin-password`。
+首次建库必须在 `.env` 中同时配置 `ADMIN_BOOTSTRAP_USERNAME` 和 `ADMIN_BOOTSTRAP_PASSWORD`。密码必须为 12–128 个字符；已有管理员不会被环境变量覆盖。
 
 ### `/api/ready` 返回 503
 

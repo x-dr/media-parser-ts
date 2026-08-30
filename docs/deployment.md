@@ -39,9 +39,8 @@ cd media-parser-ts
 umask 077
 cp .env.example .env
 mkdir -p .local
-openssl rand -base64 24 > .local/admin-password
 chmod 700 .local
-chmod 600 .env .local/admin-password
+chmod 600 .env
 ```
 
 生成平台凭据加密密钥：
@@ -61,13 +60,13 @@ MEDIA_PARSER_API_IMAGE=ghcr.io/x-dr/media-parser-ts-api:latest
 MEDIA_PARSER_ADMIN_IMAGE=ghcr.io/x-dr/media-parser-ts-admin:latest
 MEDIA_PARSER_WEB_IMAGE=ghcr.io/x-dr/media-parser-ts-web:latest
 ADMIN_BOOTSTRAP_USERNAME=admin
-ADMIN_BOOTSTRAP_PASSWORD_SOURCE=.local/admin-password
+ADMIN_BOOTSTRAP_PASSWORD=<12–128 个字符的强初始密码>
 APP_ENCRYPTION_KEY=<Base64 编码的 32 字节随机密钥>
 TRUST_PROXY=2
 PUBLIC_WEB_API_KEY=
 ```
 
-初始密码文件只能有一行 12–128 个字符。它仅在空数据库第一次启动时创建管理员，之后不会覆盖数据库中的密码。首次登录会要求修改密码。
+初始密码必须为 12–128 个字符。它仅在空数据库第一次启动时创建管理员，之后不会覆盖数据库中的密码。首次登录会要求修改密码。
 
 ### 环境变量完整说明
 
@@ -89,8 +88,7 @@ PUBLIC_WEB_API_KEY=
 | `PUBLIC_WEB_RATE_LIMIT_PER_MINUTE` | `6` | 每个可信访客 IP 每分钟请求数，`1–1000` | 依赖正确的 `TRUST_PROXY` |
 | `LOG_RETENTION_DAYS` | `30` | 调用日志保留天数，`1–365` | 传入 API |
 | `ADMIN_BOOTSTRAP_USERNAME` | `admin` | 仅空数据库首次建管理员；3–64 位且以字母或数字开头 | 传入 API |
-| `ADMIN_BOOTSTRAP_PASSWORD_FILE` | `/run/secrets/admin_password` | API 读取初始密码的文件路径，不是密码值 | Compose 固定为 secret 挂载路径 |
-| `ADMIN_BOOTSTRAP_PASSWORD_SOURCE` | `.local/admin-password` | 宿主密码文件 | 仅用于 Compose secret |
+| `ADMIN_BOOTSTRAP_PASSWORD` | 无 | 仅空数据库首次建管理员；12–128 个字符 | 通过 `.env` 传入 API |
 | `APP_ENCRYPTION_KEY` | 无 | 必填，Base64 编码的 32 字节当前密钥 | 缺失时 `/api/ready` 返回 503 |
 | `APP_ENCRYPTION_KEY_PREVIOUS` | 空 | 轮换期间解密旧凭据的旧密钥 | 平时保持空值 |
 | `CORS_ORIGINS` | 空 | 逗号分隔的精确 HTTP(S) Origin；不支持通配符 | 同源部署无需设置 |
@@ -172,7 +170,7 @@ curl --head https://media.example.com/admin/
 
 ## 6. 首次初始化公开解析页
 
-1. 打开 `https://media.example.com/admin/`，使用 `.env` 中用户名和密码文件中的初始密码登录。
+1. 打开 `https://media.example.com/admin/`，使用 `.env` 中的初始用户名和密码登录。
 2. 按提示立即修改管理员密码。
 3. 创建用途为 `public-web` 的调用方，设置合理的每分钟限额与并发。
 4. 为调用方创建 API Key，并安全保存只展示一次的完整 `mp_...` Key。
@@ -216,7 +214,7 @@ docker compose cp api:/app/data/. backups/media-parser-data/
 docker compose start
 ```
 
-同时单独安全备份 `.env`、`.local/admin-password` 和 Nginx 配置。备份包含敏感信息，应加密、限制权限并保存在另一台设备或对象存储中。恢复会覆盖现有数据，操作前应再次停服并确认目标目录，避免误覆盖。
+同时单独安全备份 `.env` 和 Nginx 配置。备份包含敏感信息，应加密、限制权限并保存在另一台设备或对象存储中。恢复会覆盖现有数据，操作前应再次停服并确认目标目录，避免误覆盖。
 
 ## 8. 常见故障
 
@@ -226,7 +224,7 @@ docker compose start
 docker compose logs --tail=200 api
 ```
 
-首次建库通常是密码文件不存在、权限不正确、密码不满足 12–128 字符，或 `ADMIN_BOOTSTRAP_PASSWORD_FILE` 被错误改成宿主路径。
+首次建库通常是 `.env` 缺少 `ADMIN_BOOTSTRAP_PASSWORD`，或密码不满足 12–128 字符。
 
 ### `/api/ready` 返回 503
 

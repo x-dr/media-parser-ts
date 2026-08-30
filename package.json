@@ -22,7 +22,7 @@
     "dev:web": "pnpm --filter @media-parser/web dev",
     "dev:public": "pnpm dev:web",
     "lint": "eslint .",
-    "start": "node api/dist/server.js",
+    "start": "node --env-file-if-exists=.env api/dist/server.js",
     "test": "pnpm --filter @media-parser/api test",
     "test:watch": "pnpm --filter @media-parser/api test:watch",
     "test:coverage": "pnpm --filter @media-parser/api test:coverage",

@@ -402,7 +402,7 @@ export const parserRegistry = {
 
 认证规则：
 
-- 初次启动从 `ADMIN_BOOTSTRAP_USERNAME` 和 `ADMIN_BOOTSTRAP_PASSWORD_FILE` 创建管理员。
+- 初次启动从 `ADMIN_BOOTSTRAP_USERNAME` 和 `ADMIN_BOOTSTRAP_PASSWORD` 创建管理员。
 - 数据库中不存在管理员且缺少引导凭据时，服务拒绝启动。
 - 引导管理员首次登录后只能调用 `me`、`password`、`refresh` 和 `logout`，完成改密后才能使用其他管理 API。
 - 密码最少 12、最多 128 个字符，使用异步 scrypt 和随机盐保存。
@@ -948,7 +948,7 @@ PARSE_TIMEOUT_MS=25000
 GLOBAL_PARSE_CONCURRENCY=20
 LOG_RETENTION_DAYS=30
 ADMIN_BOOTSTRAP_USERNAME=admin
-ADMIN_BOOTSTRAP_PASSWORD_FILE=/run/secrets/admin_password
+ADMIN_BOOTSTRAP_PASSWORD=
 APP_ENCRYPTION_KEY=
 APP_ENCRYPTION_KEY_PREVIOUS=
 CORS_ORIGINS=

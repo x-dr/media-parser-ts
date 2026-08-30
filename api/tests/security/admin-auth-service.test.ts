@@ -40,7 +40,7 @@ describe('administrator authentication lifecycle', () => {
     connections.push(connection);
     const config = await testConfig({
       adminBootstrapUsername: null,
-      adminBootstrapPasswordFile: null,
+      adminBootstrapPassword: null,
     });
     const service = new AdminAuthService(new AdminRepository(connection.database), config);
     await expect(service.initialize()).rejects.toThrow('缺少管理员引导凭据');
