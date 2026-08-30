@@ -92,7 +92,9 @@ export interface ParseLog {
   id: string;
   request_id: string;
   client_id: string;
+  client_name: string;
   api_key_id: string;
+  api_key_name: string;
   share_url: string;
   real_url: string | null;
   platform_id: string | null;
@@ -113,4 +115,7 @@ export interface ParseLog {
 export interface LogPage {
   items: ParseLog[];
   next_cursor: string | null;
+  total: number;
+  page: number;
+  page_size: number;
 }

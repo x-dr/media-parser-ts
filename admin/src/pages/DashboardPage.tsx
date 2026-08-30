@@ -37,9 +37,9 @@ function rangeQuery(range: RangeKey): string {
 }
 
 function errorGradient(errors: ErrorAggregate[]): string {
-  const colors = ['#e85d35', '#f2a52b', '#167a59', '#3478d4', '#8ba9d3', '#b5bbc4'];
+  const colors = ['#dc2626', '#18181b', '#525252', '#a3a3a3', '#d4d4d4', '#e5e5e5'];
   const total = errors.reduce((sum, item) => sum + item.total, 0);
-  if (!total) return '#eef1ed';
+  if (!total) return '#f5f5f5';
   let start = 0;
   const segments = errors.slice(0, 6).map((item, index) => {
     const end = start + item.total / total * 100;
@@ -47,7 +47,7 @@ function errorGradient(errors: ErrorAggregate[]): string {
     start = end;
     return segment;
   });
-  if (start < 100) segments.push(`#d9ded7 ${start}% 100%`);
+  if (start < 100) segments.push(`#e5e5e5 ${start}% 100%`);
   return `conic-gradient(${segments.join(', ')})`;
 }
 
@@ -103,7 +103,7 @@ export function DashboardPage(): ReactNode {
     { title: '名称', dataIndex: 'name', ellipsis: true },
     { title: '请求量', dataIndex: 'total', width: 100 },
     { title: '成功率', key: 'success', width: 150, render: (_: unknown, row: { total: number; successful: number }) => (
-      <div className="success-cell"><span>{formatPercent(row.successful, row.total)}</span><Progress percent={row.total ? row.successful / row.total * 100 : 0} showInfo={false} size="small" strokeColor="#167a59" /></div>
+      <div className="success-cell"><span>{formatPercent(row.successful, row.total)}</span><Progress percent={row.total ? row.successful / row.total * 100 : 0} showInfo={false} size="small" strokeColor="#16a34a" /></div>
     ) },
   ];
 

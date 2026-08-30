@@ -85,7 +85,7 @@ export function AppShell(): ReactNode {
     <Menu
       className="brand-menu"
       mode="inline"
-      theme="dark"
+      theme="light"
       selectedKeys={[current]}
       items={navigation}
       onClick={({ key }) => { void navigate(key); }}
@@ -149,7 +149,7 @@ export function AppShell(): ReactNode {
         size={280}
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
-        styles={{ body: { padding: 0, background: '#18211d' }, header: { display: 'none' } }}
+        styles={{ body: { padding: 0, background: '#fafafa' }, header: { display: 'none' } }}
       >
         {brand}
         {menu}

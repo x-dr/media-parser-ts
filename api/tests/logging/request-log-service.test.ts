@@ -30,7 +30,12 @@ describe('queryable request and audit logs', () => {
     const detail = service.get(id);
     expect(detail?.input_text).toBe('complete sharing text');
     expect(detail?.response_json).toContain('MEDIA_NOT_FOUND');
+    expect(service.list({ limit: 50 })[0]).toMatchObject({
+      request_ip: '192.0.2.1', client_name: 'log-test', api_key_name: 'log-key',
+    });
     expect(service.list({ limit: 50 })[0]).not.toHaveProperty('input_text');
+    expect(service.list({ limit: 50, offset: 1 })).toHaveLength(0);
+    expect(service.count({ limit: 50 })).toBe(1);
     expect(connection.database.pragma('journal_mode', { simple: true })).toBe('memory');
     expect(logRepository.get(id)?.state).toBe('completed');
   });

@@ -38,6 +38,7 @@ export interface ParseLogFilters {
   requestId?: string;
   cursorCreatedAt?: string;
   cursorId?: string;
+  offset?: number;
   limit: number;
 }
 
@@ -45,7 +46,9 @@ export interface ParseLogListRow {
   id: string;
   request_id: string;
   client_id: string;
+  client_name: string;
   api_key_id: string;
+  api_key_name: string;
   share_url: string;
   real_url: string | null;
   platform_id: string | null;
@@ -126,25 +129,45 @@ export class LogRepository {
 
   public list(filters: ParseLogFilters): ParseLogListRow[] {
     const { where, values } = buildWhere(filters);
+    const offsetClause = filters.offset === undefined ? '' : ' OFFSET ?';
+    const offsetValues = filters.offset === undefined ? [] : [filters.offset];
     return this.database.prepare(`
-      SELECT id, request_id, client_id, api_key_id, share_url, real_url, platform_id,
+      SELECT id, request_id, client_id,
+        (SELECT name FROM api_clients WHERE id = parse_request_logs.client_id) AS client_name,
+        api_key_id,
+        (SELECT name FROM api_keys WHERE id = parse_request_logs.api_key_id) AS api_key_name,
+        share_url, real_url, platform_id,
         request_ip, user_agent, state, http_status, retcode, success, error_code,
         duration_ms, created_at, expires_at
       FROM parse_request_logs ${where}
-      ORDER BY created_at DESC, id DESC LIMIT ?
-    `).all(...values, filters.limit) as ParseLogListRow[];
+      ORDER BY created_at DESC, id DESC LIMIT ?${offsetClause}
+    `).all(...values, filters.limit, ...offsetValues) as ParseLogListRow[];
+  }
+
+  public count(filters: ParseLogFilters): number {
+    const { where, values } = buildWhere(filters, [], false);
+    const row = this.database.prepare(`
+      SELECT COUNT(*) AS total FROM parse_request_logs ${where}
+    `).get(...values) as { total: number };
+    return row.total;
   }
 
   public get(id: string): ParseLogDetailRow | null {
-    return (this.database.prepare(
-      'SELECT * FROM parse_request_logs WHERE id = ?',
-    ).get(id) as ParseLogDetailRow | undefined) ?? null;
+    return (this.database.prepare(`
+      SELECT parse_request_logs.*,
+        (SELECT name FROM api_clients WHERE id = parse_request_logs.client_id) AS client_name,
+        (SELECT name FROM api_keys WHERE id = parse_request_logs.api_key_id) AS api_key_name
+      FROM parse_request_logs WHERE id = ?
+    `).get(id) as ParseLogDetailRow | undefined) ?? null;
   }
 
   public export(filters: ParseLogFilters): IterableIterator<ParseLogDetailRow> {
     const { where, values } = buildWhere(filters);
     return this.database.prepare(`
-      SELECT * FROM parse_request_logs ${where} ORDER BY created_at ASC, id ASC
+      SELECT parse_request_logs.*,
+        (SELECT name FROM api_clients WHERE id = parse_request_logs.client_id) AS client_name,
+        (SELECT name FROM api_keys WHERE id = parse_request_logs.api_key_id) AS api_key_name
+      FROM parse_request_logs ${where} ORDER BY created_at ASC, id ASC
     `).iterate(...values) as IterableIterator<ParseLogDetailRow>;
   }
 
@@ -208,6 +231,7 @@ export class LogRepository {
 function buildWhere(
   filters: ParseLogFilters,
   initialClauses: string[] = [],
+  includeCursor = true,
 ): { where: string; values: (string | number)[] } {
   const clauses = [...initialClauses];
   const values: (string | number)[] = [];
@@ -226,7 +250,7 @@ function buildWhere(
   add('retcode = ?', filters.retcode);
   add('error_code = ?', filters.errorCode);
   add('request_id = ?', filters.requestId);
-  if (filters.cursorCreatedAt && filters.cursorId) {
+  if (includeCursor && filters.cursorCreatedAt && filters.cursorId) {
     clauses.push('(created_at < ? OR (created_at = ? AND id < ?))');
     values.push(filters.cursorCreatedAt, filters.cursorCreatedAt, filters.cursorId);
   }

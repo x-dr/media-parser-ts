@@ -20,6 +20,8 @@ interface LogQuery {
   request_id?: string;
   cursor?: string;
   limit?: string | number;
+  page?: string | number;
+  page_size?: string | number;
 }
 
 const logQuerySchema = {
@@ -38,6 +40,8 @@ const logQuerySchema = {
     request_id: { type: 'string', maxLength: 64 },
     cursor: { type: 'string', maxLength: 512 },
     limit: { type: 'integer', minimum: 1, maximum: 200, default: 50 },
+    page: { type: 'integer', minimum: 1, maximum: 1_000_000 },
+    page_size: { type: 'integer', minimum: 1, maximum: 200 },
   },
 } as const;
 
@@ -51,10 +55,15 @@ export async function registerAdminLogRoutes(
     requireAdmin(request, services.auth);
     const filters = filtersFromQuery(request.query);
     const rows = services.requestLogs.list(filters);
-    const nextCursor = rows.length === filters.limit ? encodeCursor(rows.at(-1) as ParseLogListRow) : null;
+    const nextCursor = request.query.page === undefined && rows.length === filters.limit
+      ? encodeCursor(rows.at(-1) as ParseLogListRow)
+      : null;
     return adminResponse({
       items: rows.map(listView),
       next_cursor: nextCursor,
+      total: services.requestLogs.count(filters),
+      page: Number(request.query.page ?? 1),
+      page_size: filters.limit,
     }, request.id);
   });
 
@@ -111,6 +120,9 @@ export async function registerAdminLogRoutes(
 }
 
 function filtersFromQuery(query: LogQuery): ParseLogFilters {
+  if (query.cursor && query.page !== undefined) {
+    throw new AdminApiError('INVALID_PAGINATION', '分页游标和页码不能同时使用', 400);
+  }
   let cursorCreatedAt: string | undefined;
   let cursorId: string | undefined;
   if (query.cursor) {
@@ -139,7 +151,10 @@ function filtersFromQuery(query: LogQuery): ParseLogFilters {
     ...(query.request_id === undefined ? {} : { requestId: query.request_id }),
     ...(cursorCreatedAt === undefined ? {} : { cursorCreatedAt }),
     ...(cursorId === undefined ? {} : { cursorId }),
-    limit: Number(query.limit ?? 50),
+    ...(query.page === undefined ? {} : {
+      offset: (Number(query.page) - 1) * Number(query.page_size ?? query.limit ?? 50),
+    }),
+    limit: Number(query.page_size ?? query.limit ?? 50),
   };
 }
 
@@ -148,7 +163,9 @@ function listView(row: ParseLogListRow): Record<string, unknown> {
     id: row.id,
     request_id: row.request_id,
     client_id: row.client_id,
+    client_name: row.client_name,
     api_key_id: row.api_key_id,
+    api_key_name: row.api_key_name,
     share_url: row.share_url,
     real_url: row.real_url,
     platform_id: row.platform_id,

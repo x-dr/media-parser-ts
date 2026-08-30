@@ -46,6 +46,10 @@ export class RequestLogService {
     return this.repository.list(filters);
   }
 
+  public count(filters: ParseLogFilters): number {
+    return this.repository.count(filters);
+  }
+
   public get(id: string): ParseLogDetailRow | null {
     return this.repository.get(id);
   }

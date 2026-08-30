@@ -114,4 +114,73 @@ describe('admin API', () => {
       .data.find((platform) => platform.id === 'acfun');
     expect(acfun?.last_test).not.toBeNull();
   });
+
+  it('returns calling IPs and total counts for numbered log pages', async () => {
+    app = await createApp({ config: await testConfig() });
+    const login = await app.inject({
+      method: 'POST', url: '/api/admin/v1/auth/login',
+      payload: { username: 'admin', password: BOOTSTRAP_PASSWORD },
+    });
+    const initialToken = login.json<{ data: { access_token: string } }>().data.access_token;
+    const changed = await app.inject({
+      method: 'PUT', url: '/api/admin/v1/auth/password',
+      headers: { authorization: `Bearer ${initialToken}` },
+      payload: { current_password: BOOTSTRAP_PASSWORD, new_password: 'replacement-password-456' },
+    });
+    const adminToken = changed.json<{ data: { access_token: string } }>().data.access_token;
+    const adminHeaders = { authorization: `Bearer ${adminToken}` };
+    const client = await app.inject({
+      method: 'POST', url: '/api/admin/v1/clients', headers: adminHeaders,
+      payload: { name: 'pagination-client' },
+    });
+    const clientId = client.json<{ data: { id: string } }>().data.id;
+    const key = await app.inject({
+      method: 'POST', url: `/api/admin/v1/clients/${clientId}/keys`, headers: adminHeaders,
+      payload: { name: 'pagination-key' },
+    });
+    const apiKey = key.json<{ data: { api_key: string } }>().data.api_key;
+
+    for (const suffix of ['one', 'two']) {
+      const parsed = await app.inject({
+        method: 'POST',
+        url: '/api/parse',
+        headers: { authorization: `Bearer ${apiKey}`, 'user-agent': 'pagination-test' },
+        remoteAddress: '198.51.100.24',
+        payload: { text: `http://127.0.0.1/${suffix}` },
+      });
+      expect(parsed.statusCode).toBe(400);
+    }
+
+    const listed = await app.inject({
+      method: 'GET', url: '/api/admin/v1/logs?page=2&page_size=1', headers: adminHeaders,
+    });
+    expect(listed.statusCode).toBe(200);
+    expect(listed.json<{ data: unknown }>().data).toMatchObject({
+      total: 2,
+      page: 2,
+      page_size: 1,
+      next_cursor: null,
+      items: [{
+        client_name: 'pagination-client',
+        api_key_name: 'pagination-key',
+        request_ip: '198.51.100.24',
+      }],
+    });
+
+    const cursorPage = await app.inject({
+      method: 'GET', url: '/api/admin/v1/logs?limit=1', headers: adminHeaders,
+    });
+    expect(cursorPage.json<{ data: { next_cursor: string | null; total: number } }>().data)
+      .toMatchObject({ total: 2 });
+    const cursor = cursorPage.json<{ data: { next_cursor: string | null } }>().data.next_cursor;
+    expect(cursor).toEqual(expect.any(String));
+    const conflictingPagination = await app.inject({
+      method: 'GET',
+      url: `/api/admin/v1/logs?page=1&cursor=${encodeURIComponent(cursor as string)}`,
+      headers: adminHeaders,
+    });
+    expect(conflictingPagination.statusCode).toBe(400);
+    expect(conflictingPagination.json<{ error: { code: string } }>().error.code)
+      .toBe('INVALID_PAGINATION');
+  });
 });

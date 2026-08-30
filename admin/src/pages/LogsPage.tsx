@@ -1,5 +1,5 @@
 import { CopyOutlined, DownloadOutlined, FilterOutlined, LinkOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons';
-import { Alert, App, Button, Card, Collapse, DatePicker, Descriptions, Drawer, Empty, Form, Input, InputNumber, Modal, Select, Space, Table, Tag, Tooltip, Typography } from 'antd';
+import { Alert, App, Button, Card, Collapse, DatePicker, Descriptions, Drawer, Empty, Form, Input, InputNumber, Modal, Select, Space, Table, Tag, Tooltip, Typography, type TableProps } from 'antd';
 import dayjs, { type Dayjs } from 'dayjs';
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useSearchParams } from 'react-router-dom';
@@ -9,6 +9,7 @@ import { formatDate, formatDuration, jsonText, safeHttpUrl } from '../lib/format
 import type { ApiKey, Client, LogPage, ParseLog, Platform } from '../types';
 
 const { RangePicker } = DatePicker;
+const DEFAULT_PAGE_SIZE = 20;
 
 interface FilterValues {
   range?: [Dayjs, Dayjs];
@@ -72,13 +73,15 @@ export function LogsPage(): ReactNode {
   const [searchParams, setSearchParams] = useSearchParams();
   const [filterForm] = Form.useForm<FilterValues>();
   const [exportForm] = Form.useForm<ExportValues>();
+  const selectedClientId = Form.useWatch('clientId', filterForm);
   const [logs, setLogs] = useState<ParseLog[]>([]);
-  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
+  const [total, setTotal] = useState(0);
   const [clients, setClients] = useState<Client[]>([]);
   const [keys, setKeys] = useState<ApiKey[]>([]);
   const [platforms, setPlatforms] = useState<Platform[]>([]);
   const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [detail, setDetail] = useState<ParseLog | null>(null);
@@ -106,27 +109,31 @@ export function LogsPage(): ReactNode {
       .catch((cause: unknown) => setError(errorMessage(cause)));
   }, []);
 
-  const load = useCallback(async (cursor?: string): Promise<void> => {
-    if (cursor) setLoadingMore(true); else setLoading(true);
+  const load = useCallback(async (): Promise<void> => {
+    setLoading(true);
     setError(null);
     const params = new URLSearchParams(queryString);
-    params.set('limit', '50');
-    if (cursor) params.set('cursor', cursor);
+    params.set('page', String(page));
+    params.set('page_size', String(pageSize));
     try {
-      const page = await adminApi.request<LogPage>(`/api/admin/v1/logs?${params.toString()}`);
-      setLogs((items) => cursor ? [...items, ...page.items] : page.items);
-      setNextCursor(page.next_cursor);
+      const result = await adminApi.request<LogPage>(`/api/admin/v1/logs?${params.toString()}`);
+      setLogs(result.items);
+      setTotal(result.total);
     } catch (cause) { setError(errorMessage(cause)); }
-    finally { setLoading(false); setLoadingMore(false); }
-  }, [queryString]);
+    finally { setLoading(false); }
+  }, [page, pageSize, queryString]);
 
   useEffect(() => { void load(); }, [load]);
 
-  const applyFilters = (values: FilterValues): void => setSearchParams(valuesToParams(values), { replace: true });
+  const applyFilters = (values: FilterValues): void => {
+    setPage(1);
+    setSearchParams(valuesToParams(values), { replace: true });
+  };
   const clearFilters = (): void => {
     filterForm.resetFields();
     filterForm.setFieldValue('success', 'all');
     setKeys([]);
+    setPage(1);
     setSearchParams({}, { replace: true });
   };
 
@@ -157,32 +164,32 @@ export function LogsPage(): ReactNode {
   };
 
   const clientNames = useMemo(() => new Map(clients.map((item) => [item.id, item.name])), [clients]);
-  const keyNames = useMemo(() => new Map(keys.map((item) => [item.id, item.name])), [keys]);
   const platformNames = useMemo(() => new Map(platforms.map((item) => [item.id, item.name])), [platforms]);
   const activeFilterCount = [...searchParams.keys()].length;
 
-  const columns = [
-    { title: '时间', dataIndex: 'created_at', width: 178, render: (value: string) => <Tooltip title={value}>{formatDate(value)}</Tooltip> },
-    { title: 'Request ID', dataIndex: 'request_id', width: 210, render: (value: string) => <Typography.Text className="mono-cell" copyable={{ icon: <CopyOutlined /> }}>{value}</Typography.Text> },
-    { title: '调用方 / Key', key: 'client', width: 220, render: (_: unknown, log: ParseLog) => <div><strong>{clientNames.get(log.client_id) ?? log.client_id}</strong><Typography.Text type="secondary">{keyNames.get(log.api_key_id) ?? log.api_key_id}</Typography.Text></div> },
-    { title: '平台', dataIndex: 'platform_id', width: 140, render: (value: string | null) => value ? platformNames.get(value) ?? value : '识别失败' },
-    { title: '状态', key: 'state', width: 110, render: (_: unknown, log: ParseLog) => stateTag(log) },
-    { title: 'HTTP / retcode', key: 'codes', width: 130, render: (_: unknown, log: ParseLog) => `${log.http_status ?? '—'} / ${log.retcode ?? '—'}` },
-    { title: '错误码', dataIndex: 'error_code', width: 170, render: (value: string | null) => value ? <Tag color="error">{value}</Tag> : '—' },
-    { title: '耗时', dataIndex: 'duration_ms', width: 100, render: formatDuration },
-    { title: '操作', key: 'actions', fixed: 'right' as const, width: 90, render: (_: unknown, log: ParseLog) => <Button type="link" onClick={() => void openDetail(log)}>查看</Button> },
+  const columns: TableProps<ParseLog>['columns'] = [
+    { title: '时间', dataIndex: 'created_at', width: 160, render: (value: string) => <Tooltip title={value}>{formatDate(value)}</Tooltip> },
+    { title: 'Request ID', dataIndex: 'request_id', width: 180, render: (value: string) => <Typography.Text className="mono-cell" ellipsis={{ tooltip: value }} copyable={{ icon: <CopyOutlined />, text: value }}>{value}</Typography.Text> },
+    { title: '调用方 / Key', key: 'client', width: 190, render: (_: unknown, log: ParseLog) => <div className="log-client-cell"><Typography.Text strong ellipsis={{ tooltip: log.client_name }}>{log.client_name}</Typography.Text><Typography.Text type="secondary" ellipsis={{ tooltip: log.api_key_name }}>{log.api_key_name}</Typography.Text></div> },
+    { title: '调用 IP', dataIndex: 'request_ip', width: 145, render: (value: string) => <Typography.Text className="mono-cell log-ip-cell" ellipsis={{ tooltip: value }} copyable={{ icon: <CopyOutlined />, text: value }}>{value || '—'}</Typography.Text> },
+    { title: '平台', dataIndex: 'platform_id', width: 110, ellipsis: true, render: (value: string | null) => value ? platformNames.get(value) ?? value : '识别失败' },
+    { title: '状态', key: 'state', width: 95, render: (_: unknown, log: ParseLog) => stateTag(log) },
+    { title: 'HTTP / retcode', key: 'codes', width: 120, render: (_: unknown, log: ParseLog) => `${log.http_status ?? '—'} / ${log.retcode ?? '—'}` },
+    { title: '错误码', dataIndex: 'error_code', width: 145, ellipsis: true, render: (value: string | null) => value ? <Tag className="log-error-code" color="error" title={value}>{value}</Tag> : '—' },
+    { title: '耗时', dataIndex: 'duration_ms', width: 80, render: formatDuration },
+    { title: '操作', key: 'actions', fixed: 'right', width: 70, render: (_: unknown, log: ParseLog) => <Button type="link" onClick={() => void openDetail(log)}>查看</Button> },
   ];
 
   return (
     <div className="page-stack logs-page">
-      <PageHeader title="调用日志" description="按游标加载解析请求，时间按本地显示、以 UTC 查询" extra={<Button icon={<DownloadOutlined />} onClick={() => { exportForm.setFieldsValue({ range: [dayjs().subtract(24, 'hour'), dayjs()] }); setExportOpen(true); }}>导出 JSONL</Button>} />
+      <PageHeader title="调用日志" description="分页浏览解析请求，时间按本地显示、以 UTC 查询" extra={<Button icon={<DownloadOutlined />} onClick={() => { exportForm.setFieldsValue({ range: [dayjs().subtract(24, 'hour'), dayjs()] }); setExportOpen(true); }}>导出 JSONL</Button>} />
       {error ? <Alert type="error" showIcon title={error} action={<Button onClick={() => void load()}>重试</Button>} /> : null}
       <Card className="filter-card">
         <Form<FilterValues> form={filterForm} layout="vertical" initialValues={{ success: 'all' }} onFinish={applyFilters}>
           <div className="log-filter-grid">
             <Form.Item name="range" label="起止时间"><RangePicker showTime className="full-width" /></Form.Item>
             <Form.Item name="clientId" label="调用方"><Select<string> allowClear showSearch={{ optionFilterProp: 'label' }} options={clients.map((item) => ({ value: item.id, label: item.name }))} onChange={(value) => { filterForm.setFieldValue('keyId', undefined); void loadKeys(value); }} /></Form.Item>
-            <Form.Item name="keyId" label="API Key"><Select allowClear disabled={!filterForm.getFieldValue('clientId')} options={keys.map((item) => ({ value: item.id, label: `${item.name} · ${item.masked_key}` }))} /></Form.Item>
+            <Form.Item name="keyId" label="API Key"><Select allowClear disabled={!selectedClientId} options={keys.map((item) => ({ value: item.id, label: `${item.name} · ${item.masked_key}` }))} /></Form.Item>
             <Form.Item name="platformId" label="平台"><Select<string> allowClear showSearch={{ optionFilterProp: 'label' }} options={platforms.map((item) => ({ value: item.id, label: item.name }))} /></Form.Item>
             <Form.Item name="success" label="成功状态"><Select options={[{ value: 'all', label: '全部' }, { value: 'true', label: '成功' }, { value: 'false', label: '失败' }]} /></Form.Item>
             <Form.Item name="httpStatus" label="HTTP 状态"><InputNumber min={100} max={599} precision={0} /></Form.Item>
@@ -194,8 +201,31 @@ export function LogsPage(): ReactNode {
         </Form>
       </Card>
       <div className="table-card">
-        <Table<ParseLog> rowKey="id" loading={loading} columns={columns} dataSource={logs} scroll={{ x: 1480 }} pagination={false} locale={{ emptyText: activeFilterCount ? '没有符合当前筛选的调用日志' : '尚无调用日志' }} />
-        <div className="load-more"><Typography.Text type="secondary">已加载 {logs.length} 条</Typography.Text>{nextCursor ? <Button loading={loadingMore} onClick={() => void load(nextCursor)}>加载更多</Button> : logs.length ? <span>已加载全部结果</span> : null}</div>
+        <Table<ParseLog>
+          rowKey="id"
+          size="middle"
+          loading={loading}
+          columns={columns}
+          dataSource={logs}
+          scroll={{ x: 1295, scrollToFirstRowOnChange: true }}
+          pagination={{
+            current: page,
+            pageSize,
+            total,
+            placement: ['bottomEnd'],
+            responsive: true,
+            showSizeChanger: true,
+            pageSizeOptions: [20, 50, 100],
+            showQuickJumper: total > 200,
+            showTotal: (count, range) => `第 ${range[0]}-${range[1]} 条，共 ${count} 条`,
+          }}
+          onChange={(pagination) => {
+            const nextPageSize = pagination.pageSize ?? DEFAULT_PAGE_SIZE;
+            setPage(nextPageSize === pageSize ? pagination.current ?? 1 : 1);
+            setPageSize(nextPageSize);
+          }}
+          locale={{ emptyText: activeFilterCount ? '没有符合当前筛选的调用日志' : '尚无调用日志' }}
+        />
       </div>
 
       <Drawer title="调用日志详情" size={760} open={detail !== null} loading={detailLoading} onClose={() => setDetail(null)} destroyOnHidden>
@@ -204,7 +234,7 @@ export function LogsPage(): ReactNode {
             { key: 'status', label: '状态', children: stateTag(detail) },
             { key: 'request', label: 'Request ID', children: <Typography.Text code copyable>{detail.request_id}</Typography.Text> },
             { key: 'platform', label: '平台', children: detail.platform_id ? platformNames.get(detail.platform_id) ?? detail.platform_id : '识别失败' },
-            { key: 'client', label: '调用方 / Key', children: `${clientNames.get(detail.client_id) ?? detail.client_id} / ${detail.api_key_id}` },
+            { key: 'client', label: '调用方 / Key', children: `${detail.client_name ?? clientNames.get(detail.client_id) ?? detail.client_id} / ${detail.api_key_name ?? detail.api_key_id}` },
             { key: 'network', label: 'IP / User-Agent', children: <div className="break-text">{detail.request_ip}<br />{detail.user_agent}</div> },
             { key: 'time', label: '时间 / 耗时', children: `${formatDate(detail.created_at)} / ${formatDuration(detail.duration_ms)}` },
           ]} /></section>
