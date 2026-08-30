@@ -17,7 +17,8 @@ const PlatformsPage = lazy(async () => ({ default: (await import('./pages/Platfo
 const SettingsPage = lazy(async () => ({ default: (await import('./pages/SettingsPage')).SettingsPage }));
 
 function RequireSession(): ReactNode {
-  const { user } = useAuth();
+  const { user, initializing } = useAuth();
+  if (initializing) return <div className="route-loading"><Skeleton active paragraph={{ rows: 8 }} /></div>;
   return user ? <Outlet /> : <Navigate to="/login" replace />;
 }
 
@@ -27,7 +28,8 @@ function RequireChangedPassword(): ReactNode {
 }
 
 function PublicOnly(): ReactNode {
-  const { user } = useAuth();
+  const { user, initializing } = useAuth();
+  if (initializing) return <div className="route-loading"><Skeleton active paragraph={{ rows: 8 }} /></div>;
   if (!user) return <Outlet />;
   return <Navigate to={user.must_change_password ? '/change-password' : '/dashboard'} replace />;
 }

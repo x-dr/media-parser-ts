@@ -41,7 +41,7 @@ export function LoginPage(): ReactNode {
           </Typography.Paragraph>
           <Space orientation="vertical" size={18} className="security-points">
             <span><SafetyCertificateOutlined /> 凭据加密保存且不回显明文</span>
-            <span><LockOutlined /> 管理会话只保存在当前页面内存</span>
+            <span><LockOutlined /> 管理会话仅保留在当前标签页</span>
           </Space>
         </div>
       </section>
@@ -71,7 +71,7 @@ export function LoginPage(): ReactNode {
             <Button type="primary" htmlType="submit" loading={busy} block>登录</Button>
           </Form>
           <Typography.Paragraph className="auth-footnote" type="secondary">
-            为保护会话安全，刷新页面后需要重新登录。
+            刷新页面不会退出；关闭当前标签页或主动退出后需重新登录。
           </Typography.Paragraph>
         </Card>
       </section>

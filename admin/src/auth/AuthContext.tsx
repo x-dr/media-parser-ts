@@ -4,6 +4,7 @@ import type { AdminUser, TokenPair } from '../types';
 
 interface AuthContextValue {
   user: AdminUser | null;
+  initializing: boolean;
   busy: boolean;
   login: (username: string, password: string) => Promise<AdminUser>;
   changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
@@ -14,17 +15,28 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }): ReactNode {
   const [user, setUser] = useState<AdminUser | null>(null);
+  const [initializing, setInitializing] = useState(true);
   const [busy, setBusy] = useState(false);
-
-  useEffect(() => adminApi.setSessionListener((tokens) => {
-    if (!tokens) setUser(null);
-  }), []);
 
   const loadUser = useCallback(async (): Promise<AdminUser> => {
     const current = await adminApi.request<AdminUser>('/api/admin/v1/auth/me');
     setUser(current);
     return current;
   }, []);
+
+  useEffect(() => {
+    const unsubscribe = adminApi.setSessionListener((tokens) => {
+      if (!tokens) setUser(null);
+    });
+    if (!adminApi.hasSession()) {
+      setInitializing(false);
+      return unsubscribe;
+    }
+    void loadUser()
+      .catch(() => { adminApi.setTokens(null); })
+      .finally(() => { setInitializing(false); });
+    return unsubscribe;
+  }, [loadUser]);
 
   const login = useCallback(async (username: string, password: string): Promise<AdminUser> => {
     setBusy(true);
@@ -66,8 +78,8 @@ export function AuthProvider({ children }: { children: ReactNode }): ReactNode {
     }
   }, []);
 
-  const value = useMemo(() => ({ user, busy, login, changePassword, logout }), [
-    user, busy, login, changePassword, logout,
+  const value = useMemo(() => ({ user, initializing, busy, login, changePassword, logout }), [
+    user, initializing, busy, login, changePassword, logout,
   ]);
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

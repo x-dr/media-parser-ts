@@ -1,5 +1,45 @@
 import type { TokenPair } from '../types';
 
+const SESSION_STORAGE_KEY = 'media-parser.admin.session.v1';
+
+function isTokenPair(value: unknown): value is TokenPair {
+  if (!value || typeof value !== 'object') return false;
+  const pair = value as Partial<TokenPair>;
+  return typeof pair.access_token === 'string'
+    && pair.access_token.startsWith('ma_access_')
+    && typeof pair.access_expires_in === 'number'
+    && typeof pair.refresh_token === 'string'
+    && pair.refresh_token.startsWith('ma_refresh_')
+    && typeof pair.refresh_expires_in === 'number'
+    && pair.token_type === 'Bearer'
+    && typeof pair.must_change_password === 'boolean';
+}
+
+function restoreTokens(): TokenPair | null {
+  try {
+    const stored = window.sessionStorage.getItem(SESSION_STORAGE_KEY);
+    if (!stored) return null;
+    const parsed: unknown = JSON.parse(stored);
+    if (isTokenPair(parsed)) return parsed;
+    window.sessionStorage.removeItem(SESSION_STORAGE_KEY);
+  } catch {
+    // Browsers may disable storage; the in-memory session still remains usable.
+  }
+  return null;
+}
+
+function persistTokens(tokens: TokenPair | null): void {
+  try {
+    if (tokens) {
+      window.sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(tokens));
+    } else {
+      window.sessionStorage.removeItem(SESSION_STORAGE_KEY);
+    }
+  } catch {
+    // Browsers may disable storage; do not break login or logout in that case.
+  }
+}
+
 interface SuccessEnvelope<T> {
   data: T;
   request_id: string;
@@ -23,7 +63,7 @@ export class AdminApiError extends Error {
 }
 
 class AdminApiClient {
-  private tokens: TokenPair | null = null;
+  private tokens: TokenPair | null = restoreTokens();
   private sessionListener: ((tokens: TokenPair | null) => void) | null = null;
   private refreshPromise: Promise<boolean> | null = null;
 
@@ -34,7 +74,12 @@ class AdminApiClient {
 
   public setTokens(tokens: TokenPair | null): void {
     this.tokens = tokens;
+    persistTokens(tokens);
     this.sessionListener?.(tokens);
+  }
+
+  public hasSession(): boolean {
+    return this.tokens !== null;
   }
 
   public async login(username: string, password: string): Promise<TokenPair> {
