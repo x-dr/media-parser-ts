@@ -57,7 +57,9 @@ export class DouyinSharedParser implements PlatformParser {
     const detail = at(payload, 'aweme_detail');
     const bitRateUrls = array(at(detail, 'video', 'bit_rate', 0, 'play_addr', 'url_list'))
       .map((value) => string(value)).filter(Boolean);
-    const videoUrl = bitRateUrls.length >= 3 ? bitRateUrls[2] ?? '' : bitRateUrls[0] ?? '';
+    // url_list contains equivalent CDN mirrors, not increasing quality levels. Douyin currently
+    // puts a browser-accessible direct CDN URL first and a Referer-gated web play endpoint last.
+    const videoUrl = bitRateUrls[0] ?? '';
     const imagesSource = array(at(detail, 'images')).length > 0
       ? array(at(detail, 'images'))
       : array(at(detail, 'image_list'));
