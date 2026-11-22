@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { App as AntApp, ConfigProvider } from 'antd';
 import zhCN from 'antd/locale/zh_CN';
 import { BrandHeader, type ServiceState } from './components/BrandHeader';
@@ -20,6 +20,11 @@ export function App() {
   const [result, setResult] = useState<ResultState>({ kind: 'empty' });
   const requestController = useRef<AbortController | null>(null);
   const longWaitTimer = useRef<number | null>(null);
+
+  const enabledPlatformCount = useMemo(
+    () => platforms.filter((platform) => platform.enabled).length,
+    [platforms],
+  );
 
   const checkStatus = useCallback(async () => {
     setServiceState('checking');
@@ -97,39 +102,60 @@ export function App() {
       theme={{
         token: {
           colorPrimary: '#6c4de6',
+          colorPrimaryHover: '#5b3cd9',
+          colorPrimaryActive: '#4d30c4',
           colorInfo: '#6c4de6',
           colorLink: '#6c4de6',
-          colorSuccess: '#1ba97c',
-          colorWarning: '#b87503',
-          colorError: '#d93026',
-          colorText: '#1d2129',
-          colorTextSecondary: '#4e5562',
-          colorTextTertiary: '#8a919e',
-          colorBorder: '#e5e8ec',
-          colorBorderSecondary: '#eef0f3',
-          colorBgLayout: '#f7f8fa',
-          borderRadius: 8,
+          colorLinkHover: '#5b3cd9',
+          colorSuccess: '#10b981',
+          colorWarning: '#d97706',
+          colorError: '#dc2626',
+          colorText: '#0f172a',
+          colorTextSecondary: '#475569',
+          colorTextTertiary: '#64748b',
+          colorBorder: '#e2e8f0',
+          colorBorderSecondary: '#eef2f6',
+          colorBgLayout: '#f6f7fb',
+          borderRadius: 10,
           controlHeightLG: 46,
-          fontFamily: '"PingFang SC", Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif',
+          fontFamily: '"PingFang SC", Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans GB", "Microsoft YaHei", sans-serif',
         },
         components: {
-          Button: { primaryShadow: '0 6px 16px rgb(108 77 230 / 30%)', fontWeight: 500 },
-          Input: { activeShadow: '0 0 0 3px rgb(108 77 230 / 14%)', borderRadius: 10 },
-          Collapse: { headerBg: '#fff', contentBg: '#fff' },
-          Tag: { borderRadiusSM: 6 },
-          Alert: { borderRadiusLG: 10 },
+          Button: {
+            primaryShadow: '0 8px 20px -4px rgb(108 77 230 / 38%)',
+            defaultBorderColor: '#e2e8f0',
+            fontWeight: 500,
+            borderRadiusLG: 12,
+          },
+          Input: {
+            activeShadow: '0 0 0 4px rgb(108 77 230 / 12%)',
+            borderRadius: 12,
+          },
+          Collapse: {
+            headerBg: '#ffffff',
+            contentBg: '#ffffff',
+            headerPadding: '14px 18px',
+            contentPadding: '16px 18px',
+          },
+          Tag: { borderRadiusSM: 999 },
+          Alert: { borderRadiusLG: 12 },
         },
       }}
     >
       <AntApp>
         <div className="public-app" id="top">
+          <div className="ambient-bg" aria-hidden="true">
+            <div className="ambient-orb ambient-orb-primary" />
+            <div className="ambient-orb ambient-orb-accent" />
+            <div className="ambient-grid" />
+          </div>
           <BrandHeader
             serviceState={serviceState}
-            platformCount={platforms.filter((platform) => platform.enabled).length}
+            platformCount={enabledPlatformCount}
             onRefresh={() => void checkStatus()}
           />
           <main>
-            <Hero />
+            <Hero platformCount={enabledPlatformCount} />
             <div className="workspace">
               <ParseForm
                 text={text}
@@ -140,15 +166,28 @@ export function App() {
                 onSubmit={() => void handleSubmit()}
                 onCancel={handleCancel}
               />
-              {result.kind !== 'empty' && <ResultPanel state={result} onRetry={handleRetry} />}
+              {result.kind !== 'empty' && (
+                <ResultPanel state={result} platforms={platforms} onRetry={handleRetry} />
+              )}
             </div>
             <PlatformGrid platforms={platforms} loading={platformsLoading} />
             <PrivacySection />
           </main>
-          <footer>
-            <span><strong>Media Parser</strong> · 匿名媒体解析工具</span>
-            <span>支持平台与媒体能力会随上游变化</span>
-            <a href="#privacy">隐私说明</a>
+          <footer className="site-footer">
+            <div className="site-footer-inner">
+              <div className="footer-brand">
+                <span className="footer-dot" aria-hidden="true" />
+                <strong>Media Parser</strong>
+                <span className="footer-sep" aria-hidden="true">·</span>
+                <span>匿名媒体解析工具</span>
+              </div>
+              <p className="footer-note">支持平台与媒体能力会随上游策略实时变化</p>
+              <div className="footer-links">
+                <a href="#top">返回顶部</a>
+                <a href="#platforms">支持平台</a>
+                <a href="#privacy">隐私说明</a>
+              </div>
+            </div>
           </footer>
         </div>
       </AntApp>
