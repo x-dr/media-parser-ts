@@ -6,7 +6,17 @@ export type PublicErrorCode =
   | 'REDIRECT_FAILED'
   | 'PLATFORM_NOT_SUPPORTED'
   | 'MEDIA_NOT_FOUND'
+  | 'MEDIA_DELETED_OR_PRIVATE'
+  | 'NO_MEDIA_IN_CONTENT'
+  | 'COOKIE_REQUIRED'
+  | 'DOUYIN_COOKIE_REQUIRED'
   | 'XIAOHONGSHU_COOKIE_REQUIRED'
+  | 'KUAISHOU_COOKIE_REQUIRED'
+  | 'WECHAT_CHANNELS_COOKIE_REQUIRED'
+  | 'PINDUODUO_COOKIE_REQUIRED'
+  | 'PARSE_TIMEOUT'
+  | 'PROXY_UNAVAILABLE'
+  | 'PROXY_RETRY_EXHAUSTED'
   | 'UNAUTHORIZED'
   | 'RATE_LIMITED'
   | 'CONCURRENCY_LIMITED'
@@ -35,6 +45,16 @@ export class UpstreamError extends Error {
   ) {
     super(message);
     this.name = 'UpstreamError';
+  }
+}
+
+export class ProxyAttemptError extends Error {
+  public constructor(
+    public readonly reason: string,
+    public readonly cookieRequired = false,
+  ) {
+    super(reason);
+    this.name = 'ProxyAttemptError';
   }
 }
 

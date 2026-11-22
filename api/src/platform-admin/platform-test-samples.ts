@@ -1,6 +1,6 @@
 import type { PlatformId } from '../config/platforms.js';
 
-// Registered public examples from the frozen Python live-sample baseline (2026-08-28).
+// Registered public examples from the upstream 50-platform live-sample baseline.
 // Live execution is only triggered by the explicit admin test endpoint or test:live command.
 export const defaultPlatformSamples: Readonly<Record<PlatformId, string>> = Object.freeze({
   acfun: 'https://www.acfun.cn/v/ac43445963',
@@ -34,4 +34,23 @@ export const defaultPlatformSamples: Readonly<Record<PlatformId, string>> = Obje
   qianwen: 'https://activity.qianwen.com/r/ai-studio-mobile/qwen-external-share?shareId=ZeeOedXncnGlElkluRMA&authorId=OjTAcGHgZgyeCwY4jeMDuH9JkGZ10BNYFM1HfW4CcLhxRA%3D%3D',
   quark_ai: 'https://act.quark.cn/apps/sharepages/routes/share?biz_id=ai_chat_v2&env=prod&share_id=3aeb87e5f7214ecbb54881903cd02a23',
   xianyu: 'https://e.tb.cn/h.87fj9SNrqHW8kfC?tk=y1E5Tb4wkGd',
+  wechat_mp: 'https://mp.weixin.qq.com/s/CoQ8GG6f7lD7EADUey13BA',
+  toutiao: 'https://m.toutiao.com/is/fLrXD62Zo2U/',
+  hailuo: 'https://hailuoai.com/share/ai-video/enbrdg0JlAen?source-scene=shared',
+  yuanbao: 'https://yb.tencent.com/s/OXzXwcr2Vk9H',
+  pinduoduo: 'https://mobile.yangkeduo.com/goods.html?ps=6K2Mc4rjNT',
+  qqmusic: 'https://c6.y.qq.com/base/fcgi-bin/u?__=eZmYFaYs9yHY',
+  netease_music: 'https://163cn.tv/beBkdACV',
+  kugou_music: 'https://t1.kugou.com/c/gw3TdYszNaiN',
+  peiyinxiu: 'https://www.peiyinxiu.com/m/532356596',
+  pinecone_moment: 'https://m.pineconemoment.com/o/48FVc8IDuz7',
+  kwaiying: 'https://share.kwaiying.com/share/template/index.html?id=8467216&userId=702561542395651960',
+  fanqie: 'https://changdunovel.com/t/byybBzZfKbg/',
+  hongguo_duanju: 'https://novelquickapp.com/s/YlMu9l4vgE4/',
+  hongguo_manju: 'https://kylin.hainanyuyue.com/s/bR1qzzEd1A0/',
+  dewu: 'https://m.dewu.com/rn-activity/community-share?trendId=514124663&shareId=8xEKQBm',
+  lofter: 'https://emm3716958.lofter.com/post/74daebd2_34ec49f1a?incantation=rzyp3CMgofo9',
+  butterflyai: 'https://www.butterflyai.cn/s/gQ0EXE9BJsw/',
+  cctv: 'https://tv.cctv.com/2026/05/26/VIDElJFgf7P8XnEqtQr04Lf7260526.shtml',
+  yangshipin: 'https://www.yspapp.cn/5Sqx',
 });

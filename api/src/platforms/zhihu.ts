@@ -2,9 +2,27 @@ import { load } from 'cheerio';
 import type { ParseContext } from '../core/parse-context.js';
 import type { PlatformParser } from '../core/parser.js';
 import { registerParser } from '../core/parser-registry.js';
-import { array, at, author, record, result, string, stringAt, uniqueStrings } from './data.js';
+import { DEFAULT_MOBILE_USER_AGENT } from '../config/user-agents.js';
+import {
+  array,
+  at,
+  author,
+  parseJson,
+  protocolUrl,
+  record,
+  result,
+  string,
+  stringAt,
+  uniqueStrings,
+} from './data.js';
 
 type ContentType = 'answer' | 'zvideo' | 'pin' | 'article';
+
+interface ContentRef {
+  type: ContentType;
+  id: string;
+  apiPath: string;
+}
 
 class ZhihuParser implements PlatformParser {
   public readonly platform = 'zhihu' as const;
@@ -13,54 +31,164 @@ class ZhihuParser implements PlatformParser {
   public async parse(): Promise<ReturnType<typeof result>> {
     const content = extractContent(this.context.realUrl);
     if (!content) return result({});
-    const data = await this.context.session.getJson<unknown>(
-      `https://api.zhihu.com/${content.apiPath}/${content.id}`,
-      {
-        headers: { referer: 'https://www.zhihu.com/' },
-        signal: this.context.signal,
-      },
-    );
-    const pinVideo = findPinVideo(data);
-    let videoUrl = bestPlaylistUrl(at(data, 'playlist')) ||
-      bestPlaylistUrl(at(pinVideo, 'playlist'));
-    if (!videoUrl) {
-      const htmlContent = string(at(data, 'content'));
-      const lensId = /data-lens-id=["'](\d+)["']/u.exec(htmlContent)?.[1];
-      if (lensId) {
-        const lens = await this.context.session.getJson<unknown>(
-          `https://lens.zhihu.com/api/v4/videos/${lensId}`,
-          { headers: { referer: 'https://www.zhihu.com/' }, signal: this.context.signal },
-        );
-        videoUrl = bestPlaylistUrl(at(lens, 'playlist'));
+
+    const headers = this.#buildHeaders();
+    let data = await this.#fetchApiData(content, headers);
+    if (Object.keys(record(data)).length === 0) {
+      data = await this.#fetchHtmlFallback(content, headers);
+    }
+    if (Object.keys(record(data)).length === 0) return result({});
+
+    const pinVideos = findPinVideos(data);
+    const videoUrls: string[] = [];
+
+    const directPlaylist =
+      bestPlaylistUrl(at(data, 'playlist')) ||
+      bestPlaylistUrl(at(data, 'video', 'playlist'));
+    if (directPlaylist) videoUrls.push(directPlaylist);
+
+    for (const pinVideo of pinVideos) {
+      const pinUrl = bestPlaylistUrl(at(pinVideo, 'playlist')) || firstUrl(pinVideo);
+      if (pinUrl) videoUrls.push(pinUrl);
+    }
+
+    const htmlBody = string(at(data, 'content')) || string(at(data, 'content_html'));
+    if (htmlBody) {
+      for (const lensId of extractLensIds(htmlBody)) {
+        const lensVideo = await this.#fetchLensVideo(lensId, headers);
+        if (lensVideo) videoUrls.push(lensVideo);
       }
     }
+
+    const videoList = uniqueStrings(videoUrls.map(protocolUrl));
     const imageList = collectImages(data);
-    const questionTitle = stringAt(data, 'question', 'title');
-    const title = [
-      questionTitle || stringAt(data, 'title') || stringAt(data, 'excerpt_title'),
-      stringAt(data, 'excerpt'),
-    ].filter(Boolean).join('\n') || htmlToText(
-      stringAt(data, 'content_html') || stringAt(data, 'content'),
-    ) || (Object.keys(record(pinVideo)).length > 0 ? '知乎视频' : '知乎内容');
+    const coverCandidate = resolveCoverUrl(data, pinVideos[0], imageList);
+
+    const rawTitle =
+      stringAt(data, 'question', 'title') ||
+      stringAt(data, 'title') ||
+      stringAt(data, 'excerpt_title');
+    const rawDesc =
+      stringAt(data, 'excerpt') ||
+      htmlToText(stringAt(data, 'content_html') || stringAt(data, 'content'));
+    const fallbackLabel = pinVideos.length > 0 || videoList.length > 0 ? '知乎视频' : '知乎内容';
+    const title = rawTitle || rawDesc || fallbackLabel;
     const creator = at(data, 'author');
+
     return result({
       title,
-      videoUrl: videoUrl || null,
-      coverUrl: firstUrl(at(pinVideo, 'thumbnail')) || firstUrl(at(data, 'thumbnail')) ||
-        firstUrl(at(data, 'image_url')) || imageList[0] || null,
+      desc: rawDesc || null,
+      videoUrl: videoList[0] ?? null,
+      videoList: videoList.length > 1 ? videoList : [],
+      coverUrl: coverCandidate || null,
       imageList,
-      author: author(at(creator, 'name'), at(creator, 'id'), at(creator, 'avatar_url')),
+      author: author(
+        at(creator, 'name') || at(creator, 'nickname'),
+        at(creator, 'id') || at(creator, 'url_token') || at(creator, 'urlToken'),
+        protocolUrl(stringAt(creator, 'avatar_url') || stringAt(creator, 'avatarUrl')),
+      ),
     });
+  }
+
+  #buildHeaders(): Record<string, string> {
+    const cookie = this.context.credentials.cookie;
+    return {
+      'user-agent': DEFAULT_MOBILE_USER_AGENT,
+      referer: 'https://www.zhihu.com/',
+      ...(cookie ? { cookie } : {}),
+    };
+  }
+
+  async #fetchApiData(
+    content: ContentRef,
+    headers: Record<string, string>,
+  ): Promise<unknown> {
+    try {
+      const data = await this.context.session.getJson<unknown>(
+        `https://api.zhihu.com/${content.apiPath}/${content.id}`,
+        { headers, signal: this.context.signal },
+      );
+      if (Object.keys(record(data)).length > 0 && !at(data, 'error')) {
+        return data;
+      }
+    } catch {
+      // Fall back to HTML SSR extraction.
+    }
+    return {};
+  }
+
+  async #fetchHtmlFallback(
+    content: ContentRef,
+    headers: Record<string, string>,
+  ): Promise<unknown> {
+    try {
+      const html = await this.context.session.getText(this.context.realUrl, {
+        headers,
+        signal: this.context.signal,
+      });
+      if (!html) return {};
+      const $ = load(html);
+      const initialRaw = $('#js-initialData').html();
+      if (initialRaw) {
+        try {
+          const parsed = parseJson(initialRaw);
+          const entities = at(parsed, 'initialState', 'entities');
+          const entityBucket =
+            content.type === 'article'
+              ? 'articles'
+              : content.type === 'answer'
+                ? 'answers'
+                : content.type === 'zvideo'
+                  ? 'zvideos'
+                  : 'pins';
+          const entity = record(at(entities, entityBucket, content.id));
+          if (Object.keys(entity).length > 0) return entity;
+        } catch {
+          // Fall through to OpenGraph / RichText extraction.
+        }
+      }
+
+      const fallback: Record<string, unknown> = {};
+      const ogTitle = $('meta[property="og:title"]').attr('content')?.trim() ?? '';
+      if (ogTitle) fallback.title = ogTitle;
+      const ogImage = $('meta[property="og:image"]').attr('content')?.trim() ?? '';
+      if (ogImage) fallback.title_image = ogImage;
+      const ogDesc =
+        $('meta[property="og:description"]').attr('content')?.trim() ??
+        $('meta[name="description"]').attr('content')?.trim() ??
+        '';
+      if (ogDesc) fallback.excerpt = ogDesc;
+      const richHtml = $('div.Post-RichText, div.RichText').first().html() ?? '';
+      if (richHtml) fallback.content = richHtml;
+      return fallback;
+    } catch {
+      return {};
+    }
+  }
+
+  async #fetchLensVideo(
+    lensId: string,
+    headers: Record<string, string>,
+  ): Promise<string> {
+    try {
+      const lens = await this.context.session.getJson<unknown>(
+        `https://lens.zhihu.com/api/v4/videos/${lensId}`,
+        { headers, signal: this.context.signal },
+      );
+      return bestPlaylistUrl(at(lens, 'playlist'));
+    } catch {
+      return '';
+    }
   }
 }
 
-function extractContent(url: URL): { type: ContentType; id: string; apiPath: string } | null {
-  const candidates: [ContentType, RegExp, string][] = [
+function extractContent(url: URL): ContentRef | null {
+  const candidates: readonly [ContentType, RegExp, string][] = [
     ['answer', /question\/\d+\/answer\/(\d+)/u, 'answers'],
     ['answer', /\/answer\/(\d+)/u, 'answers'],
     ['zvideo', /\/zvideo\/(\d+)/u, 'videos'],
     ['pin', /\/pin\/(\d+)/u, 'pins'],
-    ['article', /(?:zhuanlan\.zhihu\.com\/p\/|\/article\/)(\d+)/u, 'articles'],
+    ['article', /(?:zhuanlan\.zhihu\.com\/p\/|zhihu\.com\/p\/|\/p\/|\/article\/)(\d+)/u, 'articles'],
   ];
   for (const [type, pattern, apiPath] of candidates) {
     const match = pattern.exec(type === 'article' ? url.href : url.pathname);
@@ -69,8 +197,22 @@ function extractContent(url: URL): { type: ContentType; id: string; apiPath: str
   return null;
 }
 
+function extractLensIds(htmlContent: string): string[] {
+  const ids: string[] = [];
+  const $ = load(htmlContent);
+  $('[data-lens-id]').each((_index, element) => {
+    const rawId = ($(element).attr('data-lens-id') ?? '').trim();
+    if (/^\d+$/u.test(rawId)) ids.push(rawId);
+  });
+  if (ids.length === 0) {
+    const match = /data-lens-id=["'](\d+)["']/u.exec(htmlContent)?.[1];
+    if (match) ids.push(match);
+  }
+  return uniqueStrings(ids);
+}
+
 function firstUrl(value: unknown): string {
-  if (typeof value === 'string') return value;
+  if (typeof value === 'string') return protocolUrl(value);
   if (Array.isArray(value)) {
     for (const item of value) {
       const found = firstUrl(item);
@@ -79,7 +221,7 @@ function firstUrl(value: unknown): string {
     return '';
   }
   const item = record(value);
-  return string(item.url) || string(item.play_url);
+  return protocolUrl(string(item.url) || string(item.play_url) || string(item.original_url));
 }
 
 function bestPlaylistUrl(value: unknown): string {
@@ -88,7 +230,7 @@ function bestPlaylistUrl(value: unknown): string {
   candidates.sort((left, right) => score(right) - score(left));
   for (const item of candidates) {
     const url = string(item.play_url) || string(item.url);
-    if (url) return url;
+    if (url) return protocolUrl(url);
   }
   return '';
 }
@@ -96,26 +238,73 @@ function bestPlaylistUrl(value: unknown): string {
 function score(item: Record<string, unknown>): number {
   const bitrate = Number(item.bitrate) || 0;
   const pixels = (Number(item.width) || 0) * (Number(item.height) || 0);
-  return (bitrate * 1_000_000_000) + pixels;
+  return bitrate * 1_000_000_000 + pixels;
 }
 
-function findPinVideo(data: unknown): unknown {
-  return array(at(data, 'content')).find((item) => stringAt(item, 'type') === 'video') ?? {};
+function findPinVideos(data: unknown): unknown[] {
+  return array(at(data, 'content')).filter((item) => stringAt(item, 'type') === 'video');
+}
+
+function extractArticleCover(data: unknown): string {
+  const coverKeys = [
+    'title_image',
+    'title_img',
+    'titleImage',
+    'cover_url',
+    'cover',
+    'thumbnail',
+    'image_url',
+    'imageUrl',
+  ] as const;
+  for (const key of coverKeys) {
+    const candidate = firstUrl(at(data, key));
+    if (candidate.startsWith('http://') || candidate.startsWith('https://')) {
+      return candidate;
+    }
+  }
+  return '';
+}
+
+function resolveCoverUrl(
+  data: unknown,
+  firstPinVideo: unknown,
+  imageList: readonly string[],
+): string {
+  return (
+    firstUrl(at(firstPinVideo, 'thumbnail')) ||
+    firstUrl(at(firstPinVideo, 'cover_url')) ||
+    extractArticleCover(data) ||
+    (imageList[0] ?? '')
+  );
 }
 
 function collectImages(data: unknown): string[] {
   const images: string[] = [];
+  const headerCover = extractArticleCover(data);
+  if (headerCover) images.push(headerCover);
+
   for (const item of array(at(data, 'content'))) {
     if (stringAt(item, 'type') !== 'image') continue;
-    images.push(firstUrl(at(item, 'url') || at(item, 'image')));
+    const pinImg = firstUrl(at(item, 'original_url') || at(item, 'url') || at(item, 'image'));
+    if (pinImg.startsWith('http://') || pinImg.startsWith('https://')) {
+      images.push(pinImg);
+    }
   }
+
   const contentHtml = stringAt(data, 'content') || stringAt(data, 'content_html');
   if (contentHtml) {
     const $ = load(contentHtml);
     $('img').each((_index, element) => {
-      const url = $(element).attr('data-original') ?? $(element).attr('data-actualsrc') ??
-        $(element).attr('src') ?? '';
-      if (url.startsWith('http://') || url.startsWith('https://')) images.push(url);
+      const rawUrl =
+        $(element).attr('data-original') ??
+        $(element).attr('data-actualsrc') ??
+        $(element).attr('data-default-watermark-src') ??
+        $(element).attr('src') ??
+        '';
+      const normalized = protocolUrl(rawUrl.trim());
+      if (normalized.startsWith('http://') || normalized.startsWith('https://')) {
+        images.push(normalized);
+      }
     });
   }
   return uniqueStrings(images);

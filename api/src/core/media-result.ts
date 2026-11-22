@@ -1,3 +1,5 @@
+import type { PublicErrorCode } from './errors.js';
+
 export interface AuthorInfo {
   nickname: string;
   authorId: string;
@@ -18,8 +20,14 @@ export interface SubtitleItem {
   endMs?: number;
 }
 
+export interface TerminalErrorDetail {
+  code: PublicErrorCode;
+  message: string;
+}
+
 export interface MediaResult {
   title: string;
+  desc?: string | null;
   videoUrl: string | null;
   videoList: string[];
   audioUrl: string | null;
@@ -27,11 +35,17 @@ export interface MediaResult {
   author: AuthorInfo | null;
   imageList: ImageItem[];
   subtitles: SubtitleItem[] | null;
+  isPreview?: boolean;
+  fullDuration?: number;
+  noMediaInContent?: boolean;
+  cookieRequired?: boolean;
+  terminalError?: TerminalErrorDetail | null;
 }
 
 export function emptyMediaResult(): MediaResult {
   return {
     title: '',
+    desc: null,
     videoUrl: null,
     videoList: [],
     audioUrl: null,
@@ -43,5 +57,10 @@ export function emptyMediaResult(): MediaResult {
 }
 
 export function hasMedia(result: MediaResult): boolean {
-  return Boolean(result.videoUrl) || result.videoList.length > 0 || result.imageList.length > 0;
+  return (
+    Boolean(result.videoUrl) ||
+    result.videoList.length > 0 ||
+    result.imageList.length > 0 ||
+    Boolean(result.audioUrl)
+  );
 }

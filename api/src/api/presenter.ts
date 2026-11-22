@@ -30,28 +30,54 @@ export function presentSuccess(
     videoList.splice(videoList.indexOf(videoUrl), 1);
     videoList.unshift(videoUrl);
   }
+  const imageList = result.imageList.map(presentImage);
+  let coverUrl = convertMediaUrlToHttps(result.coverUrl);
+  if (!coverUrl && imageList.length > 0) {
+    const firstImage = imageList[0];
+    if (typeof firstImage === 'string') {
+      coverUrl = firstImage || null;
+    } else if (firstImage) {
+      coverUrl = firstImage.url;
+    }
+  }
+  const desc = result.desc ?? null;
+  const title = result.title || (desc ?? '');
+
   const data: Record<string, unknown> = {
     video_id: getVideoId(realUrl),
     platform: platformDefinitions[platformId].displayName,
-    title: result.title,
+    title,
+    desc,
     video_url: videoUrl,
     audio_url: convertMediaUrlToHttps(result.audioUrl),
-    cover_url: convertMediaUrlToHttps(result.coverUrl),
+    cover_url: coverUrl,
     author: result.author ? {
       nickname: result.author.nickname,
       author_id: result.author.authorId,
       avatar: convertMediaUrlToHttps(result.author.avatar) ?? '',
       ...(result.author.guildName === undefined ? {} : { guild_name: result.author.guildName }),
     } : null,
-    image_list: result.imageList.map(presentImage),
+    image_list: imageList,
   };
   if (videoList.length >= 2) data.video_list = videoList;
   if (result.subtitles && result.subtitles.length > 0) {
     data.subtitles = result.subtitles.map((subtitle) => ({
       text: subtitle.text,
-      ...(subtitle.startMs === undefined ? {} : { start_ms: subtitle.startMs }),
-      ...(subtitle.endMs === undefined ? {} : { end_ms: subtitle.endMs }),
+      ...(subtitle.startMs === undefined ? {} : {
+        start: Number((subtitle.startMs / 1000).toFixed(3)),
+        start_ms: Math.round(subtitle.startMs),
+      }),
+      ...(subtitle.endMs === undefined ? {} : {
+        end: Number((subtitle.endMs / 1000).toFixed(3)),
+        end_ms: Math.round(subtitle.endMs),
+      }),
     }));
+  }
+  if (result.isPreview === true) {
+    data.is_preview = true;
+    if (result.fullDuration !== undefined && result.fullDuration > 0) {
+      data.full_duration = result.fullDuration;
+    }
   }
   return { retcode: 200, retdesc: '成功', data, succ: true };
 }

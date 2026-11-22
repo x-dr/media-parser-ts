@@ -3,6 +3,7 @@ import { Buffer } from 'node:buffer';
 export type LogLevel = 'fatal' | 'error' | 'warn' | 'info' | 'debug' | 'trace' | 'silent';
 export type ParserEngine = 'typescript' | 'legacy-http';
 export type TrustProxyConfig = false | number | readonly string[];
+export type ProxyMode = 'auto' | 'always';
 
 export interface AppConfig {
   port: number;
@@ -23,6 +24,10 @@ export interface AppConfig {
   publicWebApiKey: string | null;
   publicWebConcurrency: number;
   publicWebRateLimitPerMinute: number;
+  dynamicProxyApiUrl: URL | null;
+  proxyMode: ProxyMode;
+  proxyPoolSize: number;
+  proxyFetchPerSecond: number;
   credentialEnvironment: Readonly<Record<string, string>>;
 }
 
@@ -35,6 +40,23 @@ const LOG_LEVELS = new Set<LogLevel>([
   'trace',
   'silent',
 ]);
+
+const CREDENTIAL_ENV_KEYS = [
+  'DOUBAO_COOKIE',
+  'YUANBAO_COOKIE',
+  'WECHAT_CHANNELS_COOKIE',
+  'KUAISHOU_COOKIE',
+  'KS_COOKIE',
+  'XIAOHONGSHU_COOKIE',
+  'XHS_COOKIE',
+  'DOUYIN_COOKIE',
+  'DY_COOKIE',
+  'PINDUODUO_COOKIE',
+  'PDD_COOKIE',
+  'WEIBO_COOKIE',
+  'JIMENG_COOKIE',
+  'ZHIHU_COOKIE',
+] as const;
 
 function integer(source: NodeJS.ProcessEnv, name: string, fallback: number, min: number, max: number): number {
   const raw = source[name];
@@ -102,6 +124,29 @@ function legacyUrl(source: NodeJS.ProcessEnv, engine: ParserEngine): URL | null 
   return parsed;
 }
 
+function dynamicProxyUrl(source: NodeJS.ProcessEnv): URL | null {
+  const value = source.DYNAMIC_PROXY_API_URL?.trim();
+  if (!value) return null;
+  let parsed: URL;
+  try {
+    parsed = new URL(value);
+  } catch {
+    throw new Error('DYNAMIC_PROXY_API_URL 必须是有效的 HTTP(S) URL');
+  }
+  if (!['http:', 'https:'].includes(parsed.protocol)) {
+    throw new Error('DYNAMIC_PROXY_API_URL 必须是有效的 HTTP(S) URL');
+  }
+  return parsed;
+}
+
+function proxyMode(source: NodeJS.ProcessEnv): ProxyMode {
+  const value = (source.PROXY_MODE?.trim() || 'auto').toLowerCase();
+  if (value !== 'auto' && value !== 'always') {
+    throw new Error('PROXY_MODE 必须是 auto 或 always');
+  }
+  return value;
+}
+
 function optionalSecret(source: NodeJS.ProcessEnv, name: string): string | null {
   return source[name]?.trim() || null;
 }
@@ -115,11 +160,20 @@ export function loadConfig(source: NodeJS.ProcessEnv = process.env): AppConfig {
   const level = (source.LOG_LEVEL?.trim() || 'info') as LogLevel;
   if (!LOG_LEVELS.has(level)) throw new Error('LOG_LEVEL 无效');
   const engine = parserEngine(source);
-  const credentialEnvironment = Object.fromEntries(
-    ['DOUBAO_COOKIE', 'YUANBAO_COOKIE', 'KUAISHOU_COOKIE', 'XIAOHONGSHU_COOKIE']
-      .map((name) => [name, source[name]?.trim() ?? ''] as const)
-      .filter(([, value]) => value.length > 0),
-  );
+  const credentialEntries = new Map<string, string>();
+  for (const name of CREDENTIAL_ENV_KEYS) {
+    const value = source[name]?.trim() ?? '';
+    if (value.length > 0) credentialEntries.set(name, value);
+  }
+  const douyinUifid = (source.DOUYIN_UIFID?.trim() || source.DY_UIFID?.trim() || '');
+  if (douyinUifid) {
+    const existing = credentialEntries.get('DOUYIN_COOKIE') ?? credentialEntries.get('DY_COOKIE') ?? '';
+    if (!/\buifid\s*=/iu.test(existing)) {
+      const merged = existing ? `UIFID=${douyinUifid}; ${existing}` : `UIFID=${douyinUifid}`;
+      credentialEntries.set('DOUYIN_COOKIE', merged);
+    }
+  }
+  const credentialEnvironment = Object.fromEntries(credentialEntries);
 
   return Object.freeze({
     port: integer(source, 'PORT', 8051, 1, 65_535),
@@ -140,6 +194,10 @@ export function loadConfig(source: NodeJS.ProcessEnv = process.env): AppConfig {
     publicWebApiKey: optionalSecret(source, 'PUBLIC_WEB_API_KEY'),
     publicWebConcurrency: integer(source, 'PUBLIC_WEB_CONCURRENCY', 8, 1, 100),
     publicWebRateLimitPerMinute: integer(source, 'PUBLIC_WEB_RATE_LIMIT_PER_MINUTE', 6, 1, 1_000),
+    dynamicProxyApiUrl: dynamicProxyUrl(source),
+    proxyMode: proxyMode(source),
+    proxyPoolSize: integer(source, 'PROXY_POOL_SIZE', 2, 1, 100),
+    proxyFetchPerSecond: integer(source, 'PROXY_FETCH_PER_SECOND', 1, 1, 20),
     credentialEnvironment,
   });
 }

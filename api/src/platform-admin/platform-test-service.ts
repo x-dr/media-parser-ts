@@ -1,7 +1,7 @@
 import type { FastifyBaseLogger } from 'fastify';
 import { ulid } from 'ulid';
 import type { AppConfig } from '../config/env.js';
-import { detectPlatform, platformDefinitions, type PlatformId } from '../config/platforms.js';
+import { detectPlatform, getPlatformAllowedHosts, type PlatformId } from '../config/platforms.js';
 import { DEFAULT_DESKTOP_USER_AGENT } from '../config/user-agents.js';
 import { AppError, UpstreamError } from '../core/errors.js';
 import { hasMedia, type MediaResult } from '../core/media-result.js';
@@ -83,7 +83,7 @@ export class PlatformTestService {
       const registration = getParserRegistration(input.platformId);
       const session = new HttpSession({
         allowedHosts: [
-          ...platformDefinitions[input.platformId].domains,
+          ...getPlatformAllowedHosts(input.platformId),
           ...registration.allowedHosts,
         ],
         defaultHeaders: { 'user-agent': DEFAULT_DESKTOP_USER_AGENT },
@@ -105,7 +105,9 @@ export class PlatformTestService {
       mediaTypes = detectMediaTypes(parsed);
       missingFields = detectMissingFields(parsed);
       success = hasMedia(parsed);
-      if (!success) errorCategory = 'media_not_found';
+      if (!success) {
+        errorCategory = parsed.terminalError?.code.toLowerCase() ?? 'media_not_found';
+      }
     } catch (error) {
       errorCategory = categorize(error);
       input.logger.warn(
@@ -158,8 +160,8 @@ function detectMediaTypes(result: MediaResult): string[] {
 function detectMissingFields(result: MediaResult): string[] {
   return [
     ...(!hasMedia(result) ? ['media'] : []),
-    ...(!result.title ? ['title'] : []),
-    ...(!result.coverUrl ? ['cover'] : []),
+    ...(!result.title && !result.desc ? ['title'] : []),
+    ...(!result.coverUrl && result.imageList.length === 0 ? ['cover'] : []),
     ...(!result.author ? ['author'] : []),
   ];
 }

@@ -38,6 +38,7 @@ export function BrandHeader({ serviceState, platformCount, onRefresh }: BrandHea
           <a href="#platforms">
             支持平台{platformCount > 0 ? ` ${platformCount}` : ''}
           </a>
+          <a href="#privacy">隐私说明</a>
         </nav>
       </div>
     </header>

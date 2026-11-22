@@ -17,17 +17,54 @@ describe('public API shell', () => {
     expect((await app.inject({ method: 'GET', url: '/api/ready' })).statusCode).toBe(200);
     const platforms = await app.inject({ method: 'GET', url: '/api/platforms' });
     expect(platforms.statusCode).toBe(200);
-    expect(platforms.json<{ data: { items: unknown[] } }>().data.items).toHaveLength(31);
+    expect(platforms.json<{ data: { items: unknown[] } }>().data.items).toHaveLength(50);
     expect(platforms.body).not.toContain('credentials');
   });
 
-  it('requires a bearer API key for parsing', async () => {
+  it('requires a bearer API key for both /api/parse and /api/v1/parse', async () => {
     app = await createApp({ config: await testConfig() });
-    const response = await app.inject({
+    const legacyResp = await app.inject({
       method: 'POST', url: '/api/parse', payload: { text: 'https://www.douyin.com/video/1' },
     });
-    expect(response.statusCode).toBe(401);
-    expect(response.json()).toMatchObject({ succ: false, error_code: 'UNAUTHORIZED' });
+    expect(legacyResp.statusCode).toBe(401);
+    expect(legacyResp.json()).toMatchObject({ succ: false, error_code: 'UNAUTHORIZED' });
+
+    const v1GetNoBearer = await app.inject({
+      method: 'GET', url: '/api/v1/parse?key=mp_query_not_allowed&url=https://www.douyin.com/video/1',
+    });
+    expect(v1GetNoBearer.statusCode).toBe(401);
+    expect(v1GetNoBearer.json()).toMatchObject({ succ: false, error_code: 'UNAUTHORIZED' });
+  });
+
+  it('supports GET and POST (JSON and form) on /api/v1/parse with Bearer auth', async () => {
+    app = await createApp({ config: await testConfig() });
+    const apiKey = await createAuthorizedApiKey(app);
+    const authorization = `Bearer ${apiKey}`;
+
+    const getResp = await app.inject({
+      method: 'GET',
+      url: '/api/v1/parse?url=%E6%B2%A1%E6%9C%89%E9%93%BE%E6%8E%A5',
+      headers: { authorization },
+    });
+    expect(getResp.statusCode).toBe(400);
+    expect(getResp.json()).toMatchObject({ succ: false, error_code: 'URL_NOT_FOUND' });
+
+    const formResp = await app.inject({
+      method: 'POST',
+      url: '/api/v1/parse',
+      headers: { authorization, 'content-type': 'application/x-www-form-urlencoded' },
+      payload: 'url=no-link-here',
+    });
+    expect(formResp.statusCode).toBe(400);
+    expect(formResp.json()).toMatchObject({ succ: false, error_code: 'URL_NOT_FOUND' });
+
+    const emptyV1 = await app.inject({
+      method: 'GET',
+      url: '/api/v1/parse',
+      headers: { authorization },
+    });
+    expect(emptyV1.statusCode).toBe(400);
+    expect(emptyV1.json()).toMatchObject({ succ: false, error_code: 'INVALID_TEXT' });
   });
 
   it('keeps stable validation envelopes after API-key authentication', async () => {

@@ -23,6 +23,10 @@ export async function testConfig(overrides: Partial<AppConfig> = {}): Promise<Ap
     publicWebApiKey: null,
     publicWebConcurrency: 8,
     publicWebRateLimitPerMinute: 6,
+    dynamicProxyApiUrl: null,
+    proxyMode: 'auto',
+    proxyPoolSize: 2,
+    proxyFetchPerSecond: 1,
     credentialEnvironment: {},
     ...overrides,
   };

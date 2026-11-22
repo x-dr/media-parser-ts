@@ -21,6 +21,7 @@ import { PlatformTestService } from './platform-admin/platform-test-service.js';
 import { RequestLogService } from './logging/request-log-service.js';
 import { AuditLogService } from './logging/audit-log-service.js';
 import { RetentionService } from './logging/retention-service.js';
+import { ProxyManager } from './http/proxy-manager.js';
 import { ParseService } from './core/parse-service.js';
 import { AppError } from './core/errors.js';
 import { assertRegistryComplete } from './core/parser-registry.js';
@@ -37,6 +38,7 @@ import './platforms/index.js';
 export interface CreateAppOptions {
   config?: AppConfig;
   servePublicWebAssets?: boolean;
+  proxyManager?: ProxyManager;
 }
 
 export interface ManagedFastifyInstance extends FastifyInstance {
@@ -53,30 +55,6 @@ export async function createApp(options: CreateAppOptions = {}): Promise<Managed
   const logRepository = new LogRepository(connection.database);
   const auth = new AdminAuthService(adminRepository, config);
   await auth.initialize();
-
-  const encryption = new EncryptionService(config.encryptionKey, config.previousEncryptionKey);
-  const credentials = new CredentialService(platformRepository, encryption, config);
-  const platforms = new PlatformService(platformRepository, credentials);
-  const platformTests = new PlatformTestService(
-    config,
-    platformRepository,
-    credentials,
-    shutdown.signal,
-  );
-  const apiKeys = new ApiKeyService(apiClientRepository, config.globalParseConcurrency);
-  const requestLogs = new RequestLogService(logRepository, config);
-  const audit = new AuditLogService(logRepository, config);
-  const retention = new RetentionService(logRepository);
-  const parse = new ParseService(config, platforms, credentials, requestLogs, shutdown.signal);
-  const adminServices: AdminRouteServices = {
-    auth,
-    apiKeys,
-    audit,
-    credentials,
-    platforms,
-    platformTests,
-    requestLogs,
-  };
 
   let trustProxy: false | string[] | ((address: string, hop: number) => boolean);
   if (typeof config.trustProxy === 'number') {
@@ -116,6 +94,61 @@ export async function createApp(options: CreateAppOptions = {}): Promise<Managed
     },
   }) as unknown as ManagedFastifyInstance;
   app.decorate('abortActiveWork', () => shutdown.abort(new Error('service shutting down')));
+
+  app.addContentTypeParser(
+    'application/x-www-form-urlencoded',
+    { parseAs: 'string', bodyLimit: 64 * 1024 },
+    (_request, body, done) => {
+      try {
+        const params = new URLSearchParams(typeof body === 'string' ? body : String(body));
+        const parsed: Record<string, string> = {};
+        for (const [key, value] of params.entries()) {
+          parsed[key] = value;
+        }
+        done(null, parsed);
+      } catch (error) {
+        done(error instanceof Error ? error : new Error('Invalid form body'));
+      }
+    },
+  );
+
+  const encryption = new EncryptionService(config.encryptionKey, config.previousEncryptionKey);
+  const credentials = new CredentialService(platformRepository, encryption, config);
+  const platforms = new PlatformService(platformRepository, credentials);
+  const platformTests = new PlatformTestService(
+    config,
+    platformRepository,
+    credentials,
+    shutdown.signal,
+  );
+  const apiKeys = new ApiKeyService(apiClientRepository, config.globalParseConcurrency);
+  const requestLogs = new RequestLogService(logRepository, config);
+  const audit = new AuditLogService(logRepository, config);
+  const retention = new RetentionService(logRepository);
+  const proxyManager = options.proxyManager ?? new ProxyManager({
+    apiUrl: config.dynamicProxyApiUrl,
+    mode: config.proxyMode,
+    poolSize: config.proxyPoolSize,
+    fetchPerSecond: config.proxyFetchPerSecond,
+    logger: app.log,
+  });
+  const parse = new ParseService(
+    config,
+    platforms,
+    credentials,
+    requestLogs,
+    shutdown.signal,
+    proxyManager,
+  );
+  const adminServices: AdminRouteServices = {
+    auth,
+    apiKeys,
+    audit,
+    credentials,
+    platforms,
+    platformTests,
+    requestLogs,
+  };
 
   if (config.corsOrigins.length > 0) {
     await app.register(cors, {
@@ -264,8 +297,10 @@ export async function createApp(options: CreateAppOptions = {}): Promise<Managed
 
   await retention.cleanup();
   retention.start();
+  proxyManager.start();
   app.addHook('onClose', async () => {
     app.abortActiveWork();
+    proxyManager.stop();
     retention.stop();
     connection.close();
   });

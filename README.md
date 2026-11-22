@@ -20,18 +20,18 @@
 
 `media-parser-ts` 参考 [ucmao/media-parser](https://github.com/ucmao/media-parser) 重构，面向自托管的网页、程序与内部服务提供统一媒体解析能力。服务会从分享文本中识别链接和平台，再由本地 TypeScript Parser 直接访问平台上游，提取视频、图集、音频、字幕或实况资源；默认不依赖第三方代解析 API。
 
-除兼容原项目的解析响应外，本项目还提供调用方与 API Key 管理、平台凭据加密、SQLite 调用日志、运行统计、匿名解析网页和响应式管理后台。
+除兼容原项目的解析响应外，本项目还提供调用方与 API Key 管理、平台凭据加密、可选动态代理池、SQLite 调用日志、运行统计、匿名解析网页和响应式管理后台。
 
-> 本仓库当前注册 31 个 Parser。上游项目仍在持续增加平台，两边的数量和能力不会自动同步；请以本仓库的[平台定义](api/src/config/platforms.ts)和运行时 `GET /api/platforms` 为准。
+> 本仓库当前已同步注册 **50 个 Parser**。请以本仓库的[平台定义](api/src/config/platforms.ts)和运行时 `GET /api/platforms` 为准。
 
 ## 核心能力
 
 - **原生解析**：默认使用 TypeScript Parser，本地完成平台识别、跳转解析、请求签名和结果提取。
-- **统一结果**：规范化输出标题、作者、封面、视频、图集、音频、字幕和 Live 实况资源。
-- **两种接入方式**：提供需要 Bearer API Key 的 REST API，以及无需访客输入 Key 的同源匿名网页 BFF。
-- **完整管理面**：管理调用方、API Key、平台启停、加密凭据、受控实网测试、调用日志、审计与统计。
-- **安全请求链**：限制协议、端口、重定向、DNS、私网地址、响应体积和超时；请求 Cookie Jar 相互隔离。
-- **可运营性**：API Key 限频与并发控制、结构化脱敏日志、健康/就绪检查、SQLite WAL、优雅退出。
+- **统一结果**：规范化输出标题、正文文案（`desc`）、作者、封面、视频、图集、音频、双格式字幕和 Live 实况资源。
+- **两种接入方式**：提供需要 Bearer API Key 的 REST API（`/api/parse` 与兼容上游的 `/api/v1/parse`），以及无需访客输入 Key 的同源匿名网页 BFF。
+- **完整管理面**：管理调用方、API Key、平台启停、9 平台加密凭据、受控实网测试、调用日志、审计与统计。
+- **安全请求链与动态代理**：限制协议、端口、重定向、DNS、私网地址、响应体积和超时；支持按风控触发 15 分钟平台级代理窗口（`auto`）或轮换代理池（`always`）；请求 Cookie Jar 相互隔离。
+- **可运营性**：API Key 限频与并发控制、精细化错误码、结构化脱敏日志、健康/就绪检查、SQLite WAL、优雅退出。
 - **容器化部署**：API、公开页和管理后台分为三个非 root 容器，只由入口 Nginx 发布一个端口。
 
 ## 界面预览
@@ -52,43 +52,62 @@
 
 ## 支持平台
 
-下表表示 Parser 声明支持提取的媒体类型，不代表每条分享都一定包含对应字段。实际结果会受到内容类型、登录态、地区、时效和平台接口变化影响。
+下表表示 50 个 Parser 声明支持提取的媒体类型，不代表每条分享都一定包含对应字段。实际结果会受到内容类型、登录态、地区、时效和平台接口变化影响。
 
 | 平台 | 视频 | 图集 | 音频 | 字幕 | 实况 | 可选凭据 |
 | --- | :---: | :---: | :---: | :---: | :---: | --- |
 | AcFun | ✓ | — | — | — | — | — |
+| QQ音乐 | ✓ | — | ✓ | ✓ | — | — |
 | Soul | ✓ | ✓ | — | — | — | — |
+| 今日头条 | ✓ | ✓ | — | — | — | — |
 | 全民K歌 | ✓ | — | — | — | — | — |
-| 剪映 | ✓ | ✓ | ✓ | — | — | — |
-| 即梦AI | ✓ | — | — | — | — | — |
-| 小云雀AI | ✓ | ✓ | — | — | — | — |
+| 剪映 / CapCut | ✓ | ✓ | ✓ | — | — | — |
+| 即梦AI | ✓ | ✓ | — | — | — | `JIMENG_COOKIE` |
 | 可灵AI | ✓ | — | — | — | — | — |
-| 哔哩哔哩 | ✓ | — | ✓ | — | — | — |
+| 哔哩哔哩 | ✓ | ✓ | ✓ | — | — | — |
+| 央视 | ✓ | — | — | — | — | — |
+| 央视频 | ✓ | ✓ | — | — | — | — |
+| 夸克AI | ✓ | ✓ | — | — | — | — |
 | 好看视频 | ✓ | — | — | — | — | — |
+| 小云雀AI | ✓ | ✓ | — | — | — | — |
 | 小红书 | ✓ | ✓ | — | — | ✓ | `XIAOHONGSHU_COOKIE` |
-| 视频号 | ✓ | — | — | — | — | `YUANBAO_COOKIE` |
-| 微博 | ✓ | ✓ | — | — | — | — |
+| 得物 | ✓ | ✓ | — | — | — | — |
+| 微信公众号 | ✓ | ✓ | ✓ | — | — | — |
+| 视频号 | ✓ | ✓ | ✓ | — | — | `YUANBAO_COOKIE` |
+| 微博 | ✓ | ✓ | — | — | ✓ | `WEIBO_COOKIE` |
 | 微视 | ✓ | — | — | — | — | — |
+| 快影 | ✓ | — | ✓ | — | — | — |
 | 快手 | ✓ | ✓ | ✓ | — | — | `KUAISHOU_COOKIE` |
-| 抖音 | ✓ | ✓ | ✓ | — | ✓ | — |
+| 抖音 | ✓ | ✓ | ✓ | ✓ | ✓ | `DOUYIN_COOKIE` |
+| 拼多多 | ✓ | ✓ | ✓ | — | — | `PINDUODUO_COOKIE` |
 | 新片场 | ✓ | — | — | — | — | — |
-| 最右 | ✓ | ✓ | — | — | — | — |
+| 星绘AI | ✓ | ✓ | — | — | — | — |
+| 最右 | ✓ | ✓ | — | — | ✓ | — |
+| 松果时刻 | ✓ | ✓ | ✓ | — | — | — |
 | 梨视频 | ✓ | — | — | — | — | — |
 | 汽水音乐 | ✓ | — | ✓ | ✓ | — | — |
-| 皮皮搞笑 | ✓ | — | — | — | — | — |
+| 海螺AI | ✓ | ✓ | — | — | — | — |
+| 番茄小说 | ✓ | — | — | — | — | — |
+| 红果短剧 | ✓ | — | — | — | — | — |
+| 红果漫剧 | ✓ | — | — | — | — | — |
+| 皮皮搞笑 | ✓ | ✓ | — | — | — | — |
 | 皮皮虾 | ✓ | ✓ | — | — | — | — |
-| 知乎 | ✓ | ✓ | — | — | — | — |
+| 知乎 | ✓ | ✓ | — | — | — | `ZHIHU_COOKIE` |
 | 绿洲 | ✓ | ✓ | — | — | — | — |
+| 网易LOFTER | ✓ | ✓ | — | — | — | — |
+| 网易云音乐 | ✓ | ✓ | ✓ | ✓ | — | — |
 | 美拍 | ✓ | — | — | — | — | — |
+| 腾讯元宝 | ✓ | ✓ | — | — | — | `YUANBAO_COOKIE` |
 | 腾讯频道 | ✓ | — | — | — | — | — |
 | 虎牙 | ✓ | — | — | — | — | — |
 | 西瓜视频 | ✓ | — | — | — | — | — |
-| 豆包 | ✓ | ✓ | — | — | — | `DOUBAO_COOKIE` |
+| 豆包 | ✓ | ✓ | ✓ | — | — | `DOUBAO_COOKIE` |
 | 通义千问 | ✓ | ✓ | — | — | — | — |
-| 夸克AI | ✓ | ✓ | — | — | — | — |
-| 闲鱼 | — | ✓ | — | — | — | — |
+| 配音秀 | ✓ | — | — | — | — | — |
+| 酷狗音乐 | ✓ | — | ✓ | — | — | — |
+| 闲鱼 | ✓ | ✓ | — | — | — | — |
 
-标题、作者和封面会在平台上游能够提供时一并返回。需要登录态的内容可通过管理后台写入凭据；凭据使用 AES-256-GCM 加密保存，查询接口只返回掩码。环境变量也可用于受控部署，数据库中的托管凭据优先级更高。
+标题、正文文案、作者和封面会在平台上游能够提供时一并返回。需要登录态或风控兜底的内容可通过管理后台写入凭据；凭据使用 AES-256-GCM 加密保存，查询接口只返回掩码。环境变量也可用于受控部署，数据库中的托管凭据优先级更高。
 
 ## Docker 部署（推荐）
 
@@ -149,7 +168,7 @@ curl --fail http://127.0.0.1:8051/api/health
 curl --fail http://127.0.0.1:8051/api/ready
 ```
 
-`/api/health` 只表示进程存活；`/api/ready` 还会检查数据库、迁移、加密密钥和全部 Parser 注册。
+`/api/health` 只表示进程存活；`/api/ready` 还会检查数据库、迁移、加密密钥和全部 50 个 Parser 注册。
 
 ### GitHub Actions 镜像
 
@@ -177,7 +196,7 @@ docker compose up --detach --force-recreate
 curl --fail http://127.0.0.1:8051/web-api/status
 ```
 
-公开网页的 Key 只存在服务端，不能放入 `VITE_*`、HTML、前端 JavaScript 或浏览器存储。外部程序调用 `/api/parse` 时应创建另一个调用方和独立 Key，避免与公开网页共享配额和吊销范围。
+公开网页的 Key 只存在服务端，不能放入 `VITE_*`、HTML、前端 JavaScript 或浏览器存储。外部程序调用 `/api/parse` 或 `/api/v1/parse` 时应创建另一个调用方和独立 Key，避免与公开网页共享配额和吊销范围。
 
 ### 容器拓扑
 
@@ -188,7 +207,7 @@ curl --fail http://127.0.0.1:8051/web-api/status
 | `/api/`、`/web-api/` | Fastify API |
 | `/healthz` | 入口 Nginx 健康检查 |
 
-Compose 只发布 `${MEDIA_PARSER_PORT:-8051}`，API 与 Admin 不直接暴露宿主端口。SQLite 数据保存在 `media-parser-data` 命名卷，管理员初始密码以只读 Compose secret 挂载。
+Compose 只发布 `${MEDIA_PARSER_PORT:-8051}`，API 与 Admin 不直接暴露宿主端口。SQLite 数据保存在 `media-parser-data` 命名卷。
 
 生产环境保持 `MEDIA_PARSER_BIND_ADDRESS=127.0.0.1`，并按[配置示例](deploy/nginx/media-parser.conf.example)把域名反向代理到 `127.0.0.1:8051`。此时请求经过宿主与容器内两层 Nginx，`TRUST_PROXY` 应为 `2`；若在可信局域网直接访问 Compose 入口，则改为 `MEDIA_PARSER_BIND_ADDRESS=0.0.0.0` 和 `TRUST_PROXY=1`。
 
@@ -206,23 +225,13 @@ GET /api/health
 }
 ```
 
-### 媒体解析
+### 媒体解析（`/api/parse` 与 `/api/v1/parse`）
 
-```http
-POST /api/parse
-Authorization: Bearer mp_<key-id>_<secret>
-Content-Type: application/json
-```
+所有解析接口均强制使用 `Authorization: Bearer mp_<key-id>_<secret>` 请求头鉴权（不接受 URL 查询参数传递 Key）：
 
-请求体：
-
-```json
-{
-  "text": "这里可以粘贴完整分享文案或 https://v.douyin.com/..."
-}
-```
-
-`text` 必填，长度为 1–2000 个字符。调用示例：
+- `POST /api/parse`：严格 JSON 请求体 `{ "text": "..." }`
+- `GET /api/v1/parse?url=...`（或 `?text=...`）：兼容上游 v1 GET 调用
+- `POST /api/v1/parse`：兼容 JSON 或 `application/x-www-form-urlencoded` 表单（支持 `url` 或 `text` 字段）
 
 ```bash
 curl --fail-with-body http://127.0.0.1:8051/api/parse \
@@ -230,9 +239,13 @@ curl --fail-with-body http://127.0.0.1:8051/api/parse \
   --header 'Content-Type: application/json' \
   --header "Authorization: Bearer ${MEDIA_PARSER_API_KEY}" \
   --data '{"text":"这里替换为分享文本或链接"}'
+
+curl --fail-with-body --get http://127.0.0.1:8051/api/v1/parse \
+  --header "Authorization: Bearer ${MEDIA_PARSER_API_KEY}" \
+  --data-urlencode 'url=https://v.douyin.com/...'
 ```
 
-成功响应沿用原项目的数据外壳：
+成功响应沿用并扩展上游的数据外壳：
 
 ```json
 {
@@ -242,6 +255,7 @@ curl --fail-with-body http://127.0.0.1:8051/api/parse \
     "video_id": "7123...",
     "platform": "抖音",
     "title": "作品标题",
+    "desc": "作品正文文案",
     "video_url": "https://...",
     "audio_url": "https://...",
     "cover_url": "https://...",
@@ -250,20 +264,29 @@ curl --fail-with-body http://127.0.0.1:8051/api/parse \
       "author_id": "作者 ID",
       "avatar": "https://..."
     },
-    "image_list": []
+    "image_list": [],
+    "subtitles": [
+      {
+        "text": "字幕/歌词内容",
+        "start": 0.64,
+        "end": 2.12,
+        "start_ms": 640,
+        "end_ms": 2120
+      }
+    ]
   },
   "succ": true
 }
 ```
 
-多视频内容可能额外返回 `video_list`，有字幕时返回 `subtitles`，实况图片项使用 `{ "url", "live_photo_url" }` 结构。字段是否为空取决于平台和作品类型。
+多视频内容额外返回 `video_list`，试听截断音乐额外返回 `is_preview: true` 与 `full_duration`，实况图片项使用 `{ "url", "live_photo_url" }` 结构。
 
-失败响应示例：
+失败响应示例（含私密/删除、纯文本对话、凭据缺失与代理耗尽等精细化错误码）：
 
 ```json
 {
   "retcode": 400,
-  "retdesc": "该链接尚未支持提取 / 解析失败",
+  "retdesc": "该链接尚未支持提取",
   "data": null,
   "succ": false,
   "error_code": "PLATFORM_NOT_SUPPORTED"
@@ -340,32 +363,23 @@ pnpm check
 pnpm --filter @media-parser/api exec vitest run tests/contract/public-api.test.ts
 ```
 
-普通测试以 Mock、fixture 或 Fastify inject 为主，不证明真实平台当前可用。只有在拥有合法样例、调用方 Key 和所需授权凭据时，才运行会访问外部平台的双栈对照：
-
-```bash
-LIVE_NODE_API_URL=http://127.0.0.1:8051 \
-LIVE_PYTHON_API_URL=http://127.0.0.1:5000 \
-LIVE_NODE_API_KEY="$MEDIA_PARSER_API_KEY" \
-pnpm test:live
-```
-
-`test:live` 不属于 `pnpm check`，也不会自动代表所有授权内容可用。
-
 ## 项目结构
 
 ```text
 media-parser-ts/
 ├── api/
-│   ├── src/api/             # 公开 API 与管理员 API
-│   ├── src/core/            # Parser 注册、解析流程与统一结果
-│   ├── src/http/            # HTTP 会话、重定向与出站安全策略
-│   ├── src/platforms/       # 31 个 TypeScript Parser
+│   ├── src/api/             # 公开 API（/api/parse、/api/v1/parse）与管理员 API
+│   ├── src/core/            # Parser 注册、代理重试解析流程与统一结果
+│   ├── src/http/            # HTTP 会话、动态代理池、重定向与出站安全策略
+│   ├── src/platforms/       # 50 个平台 TypeScript Parser
+│   ├── src/signers/         # 字节系与拼多多本地可信签名器
 │   ├── src/database/        # SQLite、迁移与 Repository
 │   ├── src/security/        # 凭据加密与隔离挑战
 │   ├── tests/               # 单元、契约、安全与平台测试
 │   └── openapi/             # OpenAPI 3.1 契约
 ├── admin/                   # React 19 + Ant Design 6 管理后台
 ├── web/                     # React 19 + Ant Design 6 公开解析页
+├── platform-icons/          # 50 平台图标与品牌色回退包
 ├── deploy/nginx/            # 宿主 Nginx HTTP/HTTPS 反向代理示例
 ├── docs/                    # 重构设计、进度与界面设计资料
 ├── compose.yaml             # API + Admin + Web 编排
@@ -394,45 +408,30 @@ media-parser-ts/
 | `APP_ENCRYPTION_KEY_PREVIOUS` | 无 | 密钥轮换期间用于解密旧数据 |
 | `CORS_ORIGINS` | 空 | 逗号分隔的精确 HTTP(S) Origin，不支持通配符 |
 | `TRUST_PROXY` | `false` | `false`、可信代理跳数或可信地址列表，不能写 `true`；本文生产拓扑使用 `2` |
+| `DYNAMIC_PROXY_API_URL` | 无 | 动态代理提取接口地址（支持主流代理商 JSON 与 `IP:端口` 纯文本） |
+| `PROXY_MODE` | `auto` | `auto`（风控触发 15 分钟平台级代理窗口）或 `always`（每次解析轮换代理池） |
+| `PROXY_POOL_SIZE` | `2` | 同时保留的可分配代理 IP 数（1–100） |
+| `PROXY_FETCH_PER_SECOND` | `1` | 全服务每秒最多调用代理提取接口次数（1–20） |
 | `PARSER_ENGINE` | `typescript` | `typescript` 或全局回滚模式 `legacy-http` |
 | `LEGACY_PYTHON_URL` | 无 | `legacy-http` 模式下自托管 Python 服务的根 URL |
 | `DOUBAO_COOKIE` | 空 | 可选豆包 Cookie |
-| `YUANBAO_COOKIE` | 空 | 可选视频号/元宝 Cookie |
-| `KUAISHOU_COOKIE` | 空 | 可选快手 Cookie |
-| `XIAOHONGSHU_COOKIE` | 空 | 可选小红书 Cookie |
+| `YUANBAO_COOKIE` | 空 | 可选腾讯元宝 / 视频号 Cookie（别名 `WECHAT_CHANNELS_COOKIE`） |
+| `KUAISHOU_COOKIE` | 空 | 可选快手 Cookie（别名 `KS_COOKIE`） |
+| `XIAOHONGSHU_COOKIE` | 空 | 可选小红书 Cookie（别名 `XHS_COOKIE`） |
+| `DOUYIN_COOKIE` | 空 | 可选抖音 Cookie（别名 `DY_COOKIE`，实况动轨可额外配置 `DOUYIN_UIFID`） |
+| `PINDUODUO_COOKIE` | 空 | 可选拼多多 Cookie（别名 `PDD_COOKIE`，用于多多视频） |
+| `WEIBO_COOKIE` | 空 | 可选微博 Cookie |
+| `JIMENG_COOKIE` | 空 | 可选即梦 AI Cookie |
+| `ZHIHU_COOKIE` | 空 | 可选知乎 Cookie |
 
 `legacy-http` 是整体回滚开关，不支持按平台分流。启用后，Node 服务仍负责鉴权、限流、并发、平台启停和调用日志，再将解析请求转发给你自行部署的 Python 服务。
-
-## 常见问题
-
-### 启动时报缺少管理员引导凭据
-
-首次建库必须在 `.env` 中同时配置 `ADMIN_BOOTSTRAP_USERNAME` 和 `ADMIN_BOOTSTRAP_PASSWORD`。密码必须为 12–128 个字符；已有管理员不会被环境变量覆盖。
-
-### `/api/ready` 返回 503
-
-检查结构化日志。常见原因包括 `APP_ENCRYPTION_KEY` 缺失或格式错误、SQLite 不可写、迁移失败、旧凭据无法解密，或 Parser 注册不完整。
-
-### `/api/parse` 返回 401
-
-确认使用的是启用、未过期且未吊销的 `mp_...` 调用方 Key，而不是管理员 Token。
-
-### `/api/parse` 返回 429
-
-请求触发了每 Key 限频、每 Key 并发或全局并发限制。按响应中的 `Retry-After` 退避，不要无间隔重试。
-
-### 解析成功但浏览器无法预览
-
-部分平台会限制跨域播放、Referer、临时 URL 或媒体格式。先检查完整响应和服务日志；网页预览失败不等于 Parser 没有提取到资源。
 
 ## 与原项目的关系
 
 - 上游 [ucmao/media-parser](https://github.com/ucmao/media-parser) 是本项目的 Python 参考实现和协议行为基线。
 - 本项目默认执行独立的 TypeScript Parser，不会在后台调用公共第三方解析服务。
-- `/api/parse` 保留上游的 `retcode`、`retdesc`、`data`、`succ` 响应风格，但新增 Bearer API Key 鉴权和运营控制。
-- 平台规则经常变化；上游新增或修复不会自动进入本仓库，需要单独迁移、测试和发布。
-
-更多实现边界与验收状态见[重构设计](docs/nodejs-typescript-refactor-design.md)和[当前进度](docs/PROGRESS.md)。
+- `/api/parse` 与 `/api/v1/parse` 保留上游的 `retcode`、`retdesc`、`data`、`succ` 响应风格，同时维持严格的 Bearer API Key 鉴权和运营控制。
+- 更多实现边界与验收状态见[重构设计](docs/nodejs-typescript-refactor-design.md)和[当前进度](docs/PROGRESS.md)。
 
 ## 使用声明
 

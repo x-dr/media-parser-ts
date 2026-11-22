@@ -119,7 +119,7 @@ a:focus-visible, button:focus-visible, textarea:focus-visible, summary:focus-vis
   background: var(--mp-border);
   transform: translateY(-50%);
 }
-.header-actions a { transition: color var(--mp-motion); }
+.header-actions a { white-space: nowrap; transition: color var(--mp-motion); }
 .header-actions a:hover { color: var(--mp-primary); }
 .service-status { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
 .service-status i { width: 8px; height: 8px; border-radius: 50%; background: var(--mp-text-weak); box-shadow: 0 0 0 3px rgb(138 145 158 / 12%); }

@@ -8,14 +8,18 @@ import {
 } from '../../src/http/url-tools.js';
 
 describe('platform URL tools', () => {
-  it('defines exactly 31 stable platform IDs', () => {
-    expect(platformIds).toHaveLength(31);
-    expect(new Set(platformIds).size).toBe(31);
+  it('defines exactly 50 stable platform IDs', () => {
+    expect(platformIds).toHaveLength(50);
+    expect(new Set(platformIds).size).toBe(50);
   });
 
-  it('extracts a URL from sharing text', () => {
+  it('extracts a URL from sharing text and strips short-link numeric suffixes', () => {
     expect(extractShareUrl('复制 https://www.douyin.com/video/123 试试')?.href)
       .toBe('https://www.douyin.com/video/123');
+    expect(extractShareUrl('7.46 复制打开抖音 https://v.douyin.com/abcDEF_1/7.46 看看')?.href)
+      .toBe('https://v.douyin.com/abcDEF_1/');
+    expect(extractShareUrl('复制打开快手 https://v.kuaishou.com/xyz99/3.05')?.href)
+      .toBe('https://v.kuaishou.com/xyz99/');
     expect(extractShareUrl('没有链接')).toBeNull();
   });
 
@@ -55,6 +59,8 @@ describe('platform URL tools', () => {
     ['https://channels.weixin.qq.com/finder-preview/pages/sph?id=AzGrUgqzFv&noise=x', 'https://channels.weixin.qq.com/finder-preview/pages/sph?id=AzGrUgqzFv'],
     ['https://pages.quark.cn/r/ai-studio-mobile/external-share?shareId=abc&authorId=author&channel_from=ucpro&noise=x', 'https://pages.quark.cn/r/ai-studio-mobile/external-share?shareId=abc&authorId=author&channel_from=ucpro'],
     ['https://activity.qianwen.com/r/ai-studio-mobile/qwen-external-share?shareId=abc&authorId=author&channel_from=qwen&noise=x', 'https://activity.qianwen.com/r/ai-studio-mobile/qwen-external-share?shareId=abc&authorId=author&channel_from=qwen'],
+    ['https://music.163.com/#/song?id=186016&userid=null&noise=x', 'https://music.163.com/song?id=186016'],
+    ['https://mobile.yangkeduo.com/goods.html?goods_id=888&ps=abc&noise=x', 'https://mobile.yangkeduo.com/goods.html?goods_id=888&ps=abc'],
   ])('normalizes %s with the full compatibility query table', (original, expected) => {
     expect(normalizePlatformUrl(new URL(original)).href).toBe(expected);
   });
@@ -80,6 +86,8 @@ describe('platform URL tools', () => {
     ['https://lv.ulikecam.com/activity/lv/sharevideo?template_id=123', '123'],
     ['https://www.bilibili.com/video/BV123', 'BV123'],
     ['https://www.pearvideo.com/video_123.html', 'video_123'],
+    ['https://tv.cctv.com/2026/05/26/VIDElJFgf7P8XnEqtQr04Lf7260526.shtml', 'VIDElJFgf7P8XnEqtQr04Lf7260526'],
+    ['https://www.kugou.com/mvweb/html/mv_0123456789abcdef0123456789abcdef.html', '0123456789abcdef0123456789abcdef'],
   ])('extracts the compatible video ID from %s', (url, expected) => {
     expect(getVideoId(new URL(url))).toBe(expected);
   });
@@ -88,6 +96,7 @@ describe('platform URL tools', () => {
     ['https://random-value.m.chenzhongtech.com/fw/photo/123', 'kuaishou'],
     ['https://weixin.qq.com/sph/id', 'wechat_channels'],
     ['https://channels.weixin.qq.com/finder-preview/pages/sph?id=abc', 'wechat_channels'],
+    ['https://mp.weixin.qq.com/s/CoQ8GG6f7lD7EADUey13BA', 'wechat_mp'],
     ['https://klingai-share.kuaishou.com/h5-app/share', 'kling'],
     ['https://w13.soulsmile.cn/activity/', 'soul'],
     ['https://qishui.douyin.com/s/code/', 'qsmusic'],
@@ -95,9 +104,16 @@ describe('platform URL tools', () => {
     ['https://pd.qq.com/s/code', 'tencent_channel'],
     ['https://video.weibo.com/show', 'weibo'],
     ['https://lv.ulikecam.com/activity/lv/sharevideo', 'jianying'],
+    ['https://www.capcut.com/template-detail/123', 'jianying'],
     ['https://xhslink.cn/o/20TUYRVv4eV', 'xiaohongshu'],
     ['https://pages.quark.cn/r/ai-studio-mobile/external-share', 'quark_ai'],
     ['https://act.quark.cn/apps/sharepages/routes/share', 'quark_ai'],
+    ['https://emm3716958.lofter.com/post/74daebd2_34ec49f1a', 'lofter'],
+    ['https://www.yspapp.cn/5Sqx', 'yangshipin'],
+    ['https://dw4.co/t/A/123', 'dewu'],
+    ['https://mobile.yangkeduo.com/goods.html?ps=abc', 'pinduoduo'],
+    ['https://163cn.tv/beBkdACV', 'netease_music'],
+    ['https://c6.y.qq.com/base/fcgi-bin/u?__=abc', 'qqmusic'],
   ])('recognizes registered platform domain %s', (url, expected) => {
     expect(detectPlatform(new URL(url))).toBe(expected);
   });

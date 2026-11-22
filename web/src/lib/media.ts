@@ -25,10 +25,16 @@ export function normalizeImages(data: MediaData): NormalizedImage[] {
 }
 
 export function formatSubtitleTime(subtitle: Subtitle): string | null {
-  if (subtitle.start_ms === undefined && subtitle.end_ms === undefined) return null;
-  const start = formatMilliseconds(subtitle.start_ms ?? 0);
-  const end = subtitle.end_ms === undefined ? null : formatMilliseconds(subtitle.end_ms);
+  const startMs = subtitle.start_ms ?? (subtitle.start !== undefined ? Math.round(subtitle.start * 1_000) : undefined);
+  const endMs = subtitle.end_ms ?? (subtitle.end !== undefined ? Math.round(subtitle.end * 1_000) : undefined);
+  if (startMs === undefined && endMs === undefined) return null;
+  const start = formatMilliseconds(startMs ?? 0);
+  const end = endMs === undefined ? null : formatMilliseconds(endMs);
   return end ? `${start} – ${end}` : start;
+}
+
+export function formatSecondsDuration(seconds: number): string {
+  return formatMilliseconds(Math.max(0, Math.round(seconds * 1_000)));
 }
 
 function normalizeImage(item: string | LiveImage): NormalizedImage {

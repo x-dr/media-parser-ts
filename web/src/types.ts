@@ -32,6 +32,8 @@ export interface LiveImage {
 
 export interface Subtitle {
   text: string;
+  start?: number;
+  end?: number;
   start_ms?: number;
   end_ms?: number;
 }
@@ -40,6 +42,7 @@ export interface MediaData {
   video_id?: string;
   platform?: string;
   title?: string;
+  desc?: string | null;
   video_url?: string | null;
   video_list?: string[];
   audio_url?: string | null;
@@ -47,6 +50,8 @@ export interface MediaData {
   author?: Author | null;
   image_list?: (string | LiveImage)[];
   subtitles?: Subtitle[];
+  is_preview?: boolean;
+  full_duration?: number;
 }
 
 export interface ParseSuccess {

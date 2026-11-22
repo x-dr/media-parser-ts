@@ -2,6 +2,8 @@ import type { AppConfig } from '../config/env.js';
 import {
   getCredentialDefinition,
   platformDefinitions,
+  type CredentialDefinition,
+  type PlatformDefinition,
   type PlatformId,
 } from '../config/platforms.js';
 import {
@@ -27,7 +29,8 @@ export class CredentialService {
   ) {}
 
   public listStatus(platformId: PlatformId): CredentialStatus[] {
-    return platformDefinitions[platformId].credentials.map((definition) => {
+    const platform: PlatformDefinition = platformDefinitions[platformId];
+    return platform.credentials.map((definition) => {
       const stored = this.repository.getSecret(platformId, definition.name);
       if (stored) {
         return {
@@ -39,7 +42,7 @@ export class CredentialService {
           updatedAt: stored.updatedAt,
         };
       }
-      const environmentValue = this.config.credentialEnvironment[definition.environmentVariable];
+      const environmentValue = this.#resolveEnvValue(definition);
       if (environmentValue) {
         return {
           name: definition.name,
@@ -63,7 +66,8 @@ export class CredentialService {
 
   public getCredentials(platformId: PlatformId): Readonly<Record<string, string>> {
     const values: Record<string, string> = {};
-    for (const definition of platformDefinitions[platformId].credentials) {
+    const platform: PlatformDefinition = platformDefinitions[platformId];
+    for (const definition of platform.credentials) {
       const stored = this.repository.getSecret(platformId, definition.name);
       if (stored) {
         const decrypted = this.encryption.decrypt(platformId, definition.name, stored);
@@ -71,7 +75,7 @@ export class CredentialService {
         if (decrypted.needsRewrap) this.#store(platformId, definition.name, decrypted.value, stored.createdAt);
         continue;
       }
-      const environmentValue = this.config.credentialEnvironment[definition.environmentVariable];
+      const environmentValue = this.#resolveEnvValue(definition);
       if (environmentValue) values[definition.name] = environmentValue;
     }
     return Object.freeze(values);
@@ -95,6 +99,16 @@ export class CredentialService {
     for (const secret of this.repository.listSecrets()) {
       this.encryption.decrypt(secret.platformId, secret.credentialName, secret);
     }
+  }
+
+  #resolveEnvValue(definition: CredentialDefinition): string | undefined {
+    const primary = this.config.credentialEnvironment[definition.environmentVariable];
+    if (primary) return primary;
+    for (const alias of definition.aliases ?? []) {
+      const fallback = this.config.credentialEnvironment[alias];
+      if (fallback) return fallback;
+    }
+    return undefined;
   }
 
   #store(platformId: PlatformId, credentialName: string, value: string, createdAt: string): void {

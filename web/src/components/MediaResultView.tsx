@@ -15,6 +15,7 @@ import {
 import type { CollapseProps } from 'antd';
 import type { ParseSuccess } from '../types';
 import {
+  formatSecondsDuration,
   formatSubtitleTime,
   normalizeImages,
   safeHttpUrl,
@@ -35,6 +36,9 @@ export function MediaResultView({ response }: MediaResultViewProps) {
   const [activeVideo, setActiveVideo] = useState(0);
   const [previewFailed, setPreviewFailed] = useState(false);
   const currentVideo = videos[activeVideo] ?? null;
+  const trimmedTitle = data.title?.trim() || '未提供标题';
+  const trimmedDesc = data.desc?.trim() || '';
+  const showDesc = Boolean(trimmedDesc && trimmedDesc !== trimmedTitle);
 
   const items: CollapseProps['items'] = [
     ...(images.length > 0 ? [{
@@ -88,6 +92,11 @@ export function MediaResultView({ response }: MediaResultViewProps) {
           <div className="media-tags">
             <Tag color="purple">{data.platform || '未知平台'}</Tag>
             <Tag color="success"><CheckCircleFilled />解析成功</Tag>
+            {data.is_preview && (
+              <Tag color="warning">
+                试听片段{data.full_duration ? `（完整 ${formatSecondsDuration(data.full_duration)}）` : ''}
+              </Tag>
+            )}
           </div>
           {data.author && (data.author.nickname || avatar) && (
             <div className="author-row">
@@ -98,7 +107,8 @@ export function MediaResultView({ response }: MediaResultViewProps) {
               </div>
             </div>
           )}
-          <h3>{data.title?.trim() || '未提供标题'}</h3>
+          <h3>{trimmedTitle}</h3>
+          {showDesc && <p>{trimmedDesc}</p>}
           <div className="media-actions">
             {currentVideo && (
               <>
@@ -114,6 +124,18 @@ export function MediaResultView({ response }: MediaResultViewProps) {
                 </Button>
                 <CopyVideoLinkButton key={currentVideo} url={currentVideo} />
               </>
+            )}
+            {!currentVideo && audio && (
+              <Button
+                type="primary"
+                size="large"
+                icon={<AudioOutlined />}
+                href={audio}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                查看 / 下载音频资源
+              </Button>
             )}
             {cover && (
               <Button
@@ -232,7 +254,7 @@ function SubtitleList({ subtitles }: { subtitles: NonNullable<ParseSuccess['data
     <div className="subtitle-list">
       <ol>
         {visible.map((subtitle, index) => (
-          <li key={`${subtitle.start_ms ?? 'x'}-${index}`}>
+          <li key={`${subtitle.start_ms ?? subtitle.start ?? 'x'}-${index}`}>
             {formatSubtitleTime(subtitle) && <time>{formatSubtitleTime(subtitle)}</time>}
             <span>{subtitle.text}</span>
           </li>

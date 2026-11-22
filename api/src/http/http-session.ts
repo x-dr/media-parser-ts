@@ -4,8 +4,9 @@ import type { IncomingMessage } from 'node:http';
 import type { LookupFunction } from 'node:net';
 import got, { RequestError, type Headers, type OptionsOfTextResponseBody } from 'got';
 import { CookieJar } from 'tough-cookie';
-import { UpstreamError } from '../core/errors.js';
+import { ProxyAttemptError, UpstreamError } from '../core/errors.js';
 import { OutboundPolicy } from './outbound-policy.js';
+import { createProxyAgents, type ProxyEndpoint } from './proxy-agent.js';
 
 export interface HttpResponse {
   statusCode: number;
@@ -35,7 +36,11 @@ export interface HttpSessionOptions {
   timeoutMs: number;
   maxBodyBytes?: number;
   cookieJar?: CookieJar;
+  proxy?: ProxyEndpoint | null;
+  onCookieChallenge?: () => void;
 }
+
+const AUTH_CHALLENGE_SEGMENTS = new Set(['login', 'signin', 'captcha', 'verify']);
 
 export class HttpSession {
   readonly #policy: OutboundPolicy;
@@ -43,6 +48,8 @@ export class HttpSession {
   readonly #timeoutMs: number;
   readonly #maxBodyBytes: number;
   readonly #defaultHeaders: Headers;
+  readonly #proxy: ProxyEndpoint | null;
+  readonly #onCookieChallenge: (() => void) | undefined;
 
   public constructor(options: HttpSessionOptions) {
     this.#policy = new OutboundPolicy({ allowedHosts: options.allowedHosts });
@@ -50,25 +57,27 @@ export class HttpSession {
     this.#timeoutMs = options.timeoutMs;
     this.#maxBodyBytes = options.maxBodyBytes ?? 10 * 1024 * 1024;
     this.#defaultHeaders = options.defaultHeaders ?? {};
+    this.#proxy = options.proxy ?? null;
+    this.#onCookieChallenge = options.onCookieChallenge;
   }
 
   public async request(url: URL | string, options: HttpRequestOptions = {}): Promise<HttpResponse> {
     const parsedUrl = typeof url === 'string' ? new URL(url) : new URL(url.href);
     await this.#policy.validateUrl(parsedUrl);
     const maxBodyBytes = options.maxBodyBytes ?? this.#maxBodyBytes;
+    const timeoutMs = options.timeoutMs ?? this.#timeoutMs;
 
     try {
       const requestOptions: OptionsOfTextResponseBody = {
         method: options.method ?? 'GET',
         headers: { ...this.#defaultHeaders, ...options.headers },
         cookieJar: this.#cookieJar,
-        timeout: { request: options.timeoutMs ?? this.#timeoutMs },
+        timeout: { request: timeoutMs },
         retry: { limit: 0 },
         throwHttpErrors: false,
         followRedirect: options.followRedirect ?? false,
         maxRedirects: options.maxRedirects ?? 5,
         decompress: true,
-        dnsLookup: this.#safeLookup,
         hooks: {
           beforeRedirect: [async (updatedOptions) => {
             if (!updatedOptions.url) throw new Error('重定向缺少目标 URL');
@@ -76,6 +85,11 @@ export class HttpSession {
           }],
         },
       };
+      if (this.#proxy) {
+        requestOptions.agent = createProxyAgents(this.#proxy, timeoutMs);
+      } else {
+        requestOptions.dnsLookup = this.#safeLookup;
+      }
       if (options.searchParams !== undefined) requestOptions.searchParams = options.searchParams;
       if (options.json !== undefined) requestOptions.json = options.json;
       if (options.form !== undefined) requestOptions.form = options.form;
@@ -103,6 +117,7 @@ export class HttpSession {
       if (options.discardBody) {
         const response = await responsePromise;
         stream.destroy();
+        this.#inspectResponseForProxyOrChallenge(response.statusCode, response.url, response.headers);
         return { ...response, body: Buffer.alloc(0) };
       }
 
@@ -114,14 +129,22 @@ export class HttpSession {
         const buffer = Buffer.from(chunk);
         totalBytes += buffer.length;
         if (totalBytes > maxBodyBytes) {
+          const headResponse = await responsePromise.catch(() => null);
           stream.destroy(new UpstreamError('body_too_large', '上游响应体超过限制'));
-          throw new UpstreamError('body_too_large', '上游响应体超过限制');
+          throw new UpstreamError('body_too_large', '上游响应体超过限制', headResponse?.statusCode);
         }
         chunks.push(buffer);
       }
       const response = await responsePromise;
+      this.#inspectResponseForProxyOrChallenge(response.statusCode, response.url, response.headers);
       return { ...response, body: Buffer.concat(chunks, totalBytes) };
     } catch (error) {
+      if (error instanceof ProxyAttemptError) throw error;
+      if (this.#proxy && !(error instanceof UpstreamError && error.category === 'body_too_large')) {
+        throw new ProxyAttemptError(
+          error instanceof Error ? `代理请求失败：${error.message}` : '代理网络连接失败',
+        );
+      }
       if (error instanceof UpstreamError) throw error;
       if (error instanceof RequestError) {
         const category = error.code === 'ETIMEDOUT' ? 'timeout' : 'network';
@@ -153,6 +176,38 @@ export class HttpSession {
 
   public async setCookie(rawCookie: string, url: URL | string): Promise<void> {
     await this.#cookieJar.setCookie(rawCookie, typeof url === 'string' ? url : url.href);
+  }
+
+  #inspectResponseForProxyOrChallenge(
+    statusCode: number,
+    responseUrl: URL,
+    headers: Readonly<Record<string, string | string[] | undefined>>,
+  ): void {
+    const rawLocation = headers.location;
+    const firstLocation = Array.isArray(rawLocation) ? rawLocation[0] : rawLocation;
+    let targetPath = responseUrl.pathname.toLowerCase();
+    if (firstLocation) {
+      try {
+        targetPath = new URL(firstLocation, responseUrl).pathname.toLowerCase();
+      } catch {
+        // Ignore malformed redirect Location headers here.
+      }
+    }
+    const isChallenge = targetPath
+      .split('/')
+      .some((segment) => AUTH_CHALLENGE_SEGMENTS.has(segment));
+    if (isChallenge) {
+      this.#onCookieChallenge?.();
+      if (this.#proxy) {
+        throw new ProxyAttemptError('平台要求 Cookie 或登录校验', true);
+      }
+    }
+    if (
+      this.#proxy &&
+      (statusCode === 401 || statusCode === 403 || statusCode === 407 || statusCode === 429 || statusCode >= 500)
+    ) {
+      throw new ProxyAttemptError(`平台访问失败，HTTP ${statusCode}`);
+    }
   }
 
   readonly #safeLookup: LookupFunction = (hostname, options, callback) => {

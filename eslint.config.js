@@ -12,6 +12,7 @@ export default tseslint.config(
       // Trusted versioned signer sources copied byte-for-byte from the Python baseline.
       'api/src/signers/bytedance/a_bogus.js',
       'api/src/signers/bytedance/x_bogus.js',
+      'api/src/signers/pinduoduo/anti_content.js',
     ],
   },
   eslint.configs.recommended,

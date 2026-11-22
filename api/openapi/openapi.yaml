@@ -1,8 +1,8 @@
 openapi: 3.1.0
 info:
   title: Media Parser API
-  version: 0.1.0
-  description: Node.js/TypeScript media extraction service. Admin tokens and API keys are separate credentials.
+  version: 0.2.0
+  description: Node.js/TypeScript 50-platform media extraction service. Admin tokens and API keys are separate credentials.
 servers:
   - url: http://localhost:8051
 paths:
@@ -15,7 +15,7 @@ paths:
     get:
       operationId: ready
       responses:
-        '200': { description: Database, encryption and all parser registrations are ready }
+        '200': { description: Database, encryption and all 50 parser registrations are ready }
         '503': { description: Service is not ready }
   /api/parse:
     post:
@@ -36,7 +36,58 @@ paths:
         '400': { $ref: '#/components/responses/LegacyParseResponse' }
         '401': { $ref: '#/components/responses/LegacyParseResponse' }
         '429': { $ref: '#/components/responses/LegacyParseResponse' }
+        '502': { $ref: '#/components/responses/LegacyParseResponse' }
         '503': { $ref: '#/components/responses/LegacyParseResponse' }
+        '504': { $ref: '#/components/responses/LegacyParseResponse' }
+  /api/v1/parse:
+    get:
+      operationId: parseMediaV1Get
+      description: Upstream-compatible GET endpoint. Strictly requires Bearer mp_... API key in Authorization header.
+      security: [{ apiKey: [] }]
+      parameters:
+        - name: url
+          in: query
+          required: false
+          schema: { type: string, minLength: 1, maxLength: 2000 }
+        - name: text
+          in: query
+          required: false
+          schema: { type: string, minLength: 1, maxLength: 2000 }
+      responses:
+        '200': { $ref: '#/components/responses/LegacyParseResponse' }
+        '400': { $ref: '#/components/responses/LegacyParseResponse' }
+        '401': { $ref: '#/components/responses/LegacyParseResponse' }
+        '429': { $ref: '#/components/responses/LegacyParseResponse' }
+        '502': { $ref: '#/components/responses/LegacyParseResponse' }
+        '503': { $ref: '#/components/responses/LegacyParseResponse' }
+        '504': { $ref: '#/components/responses/LegacyParseResponse' }
+    post:
+      operationId: parseMediaV1Post
+      description: Upstream-compatible POST endpoint accepting JSON or URL-encoded form body (url or text). Strictly requires Bearer mp_... API key in Authorization header.
+      security: [{ apiKey: [] }]
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                url: { type: string, minLength: 1, maxLength: 2000 }
+                text: { type: string, minLength: 1, maxLength: 2000 }
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                url: { type: string, minLength: 1, maxLength: 2000 }
+                text: { type: string, minLength: 1, maxLength: 2000 }
+      responses:
+        '200': { $ref: '#/components/responses/LegacyParseResponse' }
+        '400': { $ref: '#/components/responses/LegacyParseResponse' }
+        '401': { $ref: '#/components/responses/LegacyParseResponse' }
+        '429': { $ref: '#/components/responses/LegacyParseResponse' }
+        '502': { $ref: '#/components/responses/LegacyParseResponse' }
+        '503': { $ref: '#/components/responses/LegacyParseResponse' }
+        '504': { $ref: '#/components/responses/LegacyParseResponse' }
   /api/platforms:
     get:
       operationId: listPublicPlatforms
@@ -71,7 +122,9 @@ paths:
         '200': { $ref: '#/components/responses/LegacyParseResponse' }
         '400': { $ref: '#/components/responses/LegacyParseResponse' }
         '429': { $ref: '#/components/responses/LegacyParseResponse' }
+        '502': { $ref: '#/components/responses/LegacyParseResponse' }
         '503': { $ref: '#/components/responses/LegacyParseResponse' }
+        '504': { $ref: '#/components/responses/LegacyParseResponse' }
   /api/admin/v1/auth/login:
     post:
       operationId: adminLogin
@@ -260,6 +313,34 @@ components:
                   message: { type: string }
               request_id: { type: string }
   schemas:
+    SubtitleItem:
+      type: object
+      required: [text]
+      properties:
+        text: { type: string }
+        start: { type: number, description: Start timestamp in seconds }
+        end: { type: number, description: End timestamp in seconds }
+        start_ms: { type: integer, description: Start timestamp in milliseconds }
+        end_ms: { type: integer, description: End timestamp in milliseconds }
+    ParsedMediaData:
+      type: object
+      required: [video_id, platform, title, desc, video_url, audio_url, cover_url, author, image_list]
+      properties:
+        video_id: { type: string }
+        platform: { type: string }
+        title: { type: string }
+        desc: { type: [string, 'null'] }
+        video_url: { type: [string, 'null'] }
+        video_list: { type: array, items: { type: string } }
+        audio_url: { type: [string, 'null'] }
+        cover_url: { type: [string, 'null'] }
+        author: { type: [object, 'null'] }
+        image_list: { type: array }
+        subtitles:
+          type: array
+          items: { $ref: '#/components/schemas/SubtitleItem' }
+        is_preview: { type: boolean }
+        full_duration: { type: number }
     LegacyEnvelope:
       oneOf:
         - type: object
@@ -267,7 +348,7 @@ components:
           properties:
             retcode: { const: 200 }
             retdesc: { const: 成功 }
-            data: { type: object }
+            data: { $ref: '#/components/schemas/ParsedMediaData' }
             succ: { const: true }
         - type: object
           required: [retcode, retdesc, data, succ, error_code]
