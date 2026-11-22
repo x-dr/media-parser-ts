@@ -117,7 +117,7 @@ export function App() {
           colorBorderSecondary: '#eef2f6',
           colorBgLayout: '#f6f7fb',
           borderRadius: 10,
-          controlHeightLG: 46,
+          controlHeightLG: 42,
           fontFamily: '"PingFang SC", Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans GB", "Microsoft YaHei", sans-serif',
         },
         components: {
@@ -155,7 +155,7 @@ export function App() {
             onRefresh={() => void checkStatus()}
           />
           <main>
-            <Hero platformCount={enabledPlatformCount} />
+            <Hero />
             <div className="workspace">
               <ParseForm
                 text={text}

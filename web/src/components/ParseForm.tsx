@@ -55,7 +55,9 @@ export function ParseForm(props: ParseFormProps) {
       <div className="request-header">
         <div className="request-title-group">
           <h2 className="panel-title" id="request-title">输入分享内容</h2>
-          <label className="field-inline-label" htmlFor="share-text">分享文本或链接</label>
+          <label className="field-inline-label" htmlFor="share-text" id="share-help">
+            直接粘贴 App 完整分享文案或链接，无需手工提取 URL
+          </label>
         </div>
         <span
           className={`char-counter ${countTone}`}
@@ -74,7 +76,7 @@ export function ParseForm(props: ParseFormProps) {
             variant="borderless"
             value={props.text}
             maxLength={MAX_LENGTH}
-            autoSize={{ minRows: 5, maxRows: 10 }}
+            autoSize={{ minRows: 3, maxRows: 8 }}
             readOnly={props.submitting}
             status={props.error ? 'error' : undefined}
             aria-describedby={`share-help${props.error ? ' share-error' : ''}`}
@@ -82,73 +84,71 @@ export function ParseForm(props: ParseFormProps) {
             onChange={(event) => props.onTextChange(event.target.value)}
             onKeyDown={handleKeyDown}
           />
-          <div className="composer-footer" id="share-help">
-            <span className="composer-tip">可直接粘贴整段分享文案，无需手工提取 URL</span>
-            <span className="shortcut-keys" aria-hidden="true">
-              <kbd>Ctrl</kbd>
-              <span>/</span>
-              <kbd>⌘</kbd>
-              <span>+</span>
-              <kbd>Enter</kbd>
-              <em>提交</em>
-            </span>
+          <div className="composer-bar">
+            {props.submitting ? (
+              <span className="composer-submitting-hint">正在请求上游平台，请稍候…</span>
+            ) : (
+              <div className="composer-tools">
+                <Button
+                  className="composer-tool-btn"
+                  icon={<SnippetsOutlined />}
+                  onClick={() => void handlePaste()}
+                >
+                  粘贴链接
+                </Button>
+                <Button
+                  className="composer-tool-btn"
+                  icon={<DeleteOutlined />}
+                  disabled={charCount === 0}
+                  onClick={() => props.onTextChange('')}
+                >
+                  清除内容
+                </Button>
+                <span className="shortcut-keys" aria-hidden="true">
+                  <kbd>Ctrl</kbd>
+                  <span>/</span>
+                  <kbd>⌘</kbd>
+                  <span>+</span>
+                  <kbd>Enter</kbd>
+                  <em>解析</em>
+                </span>
+              </div>
+            )}
+
+            <div className="composer-primary-group">
+              {props.submitting && (
+                <Button
+                  className="parse-cancel"
+                  danger
+                  icon={<CloseOutlined />}
+                  onClick={props.onCancel}
+                >
+                  取消请求
+                </Button>
+              )}
+              <Button
+                className="parse-submit"
+                type="primary"
+                icon={<ThunderboltOutlined />}
+                loading={props.submitting}
+                disabled={!canSubmit}
+                onClick={props.onSubmit}
+              >
+                {props.submitting ? '正在解析…' : '开始解析'}
+              </Button>
+            </div>
           </div>
         </div>
         {props.error && <p className="field-error" id="share-error" role="alert">{props.error}</p>}
       </div>
 
-      <div className="submit-actions">
-        <Button
-          className="parse-submit"
-          type="primary"
-          size="large"
-          icon={<ThunderboltOutlined />}
-          loading={props.submitting}
-          disabled={!canSubmit}
-          onClick={props.onSubmit}
-        >
-          {props.submitting ? '正在解析…' : '开始解析'}
-        </Button>
-        {props.submitting ? (
-          <Button
-            className="parse-tool parse-cancel"
-            size="large"
-            danger
-            icon={<CloseOutlined />}
-            onClick={props.onCancel}
-          >
-            取消请求
-          </Button>
-        ) : (
-          <>
-            <Button
-              className="parse-tool"
-              size="large"
-              icon={<SnippetsOutlined />}
-              onClick={() => void handlePaste()}
-            >
-              粘贴链接
-            </Button>
-            <Button
-              className="parse-tool"
-              size="large"
-              icon={<DeleteOutlined />}
-              disabled={charCount === 0}
-              onClick={() => props.onTextChange('')}
-            >
-              清除内容
-            </Button>
-          </>
-        )}
-      </div>
-
-      <div className="retention-strip">
+      <p className="retention-note">
         <LockOutlined aria-hidden="true" />
         <span>
           提交内容、结果、IP 与 User-Agent 默认保留 30 天，用于提供解析与排查故障。
           <a href="#privacy">了解数据使用</a>
         </span>
-      </div>
+      </p>
     </section>
   );
 }

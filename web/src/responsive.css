@@ -1,7 +1,7 @@
 @media (max-width: 1199px) {
-  main { padding-top: 44px; padding-bottom: 72px; }
-  .workspace-panel { padding: 24px; }
-  .request-panel { padding-top: 26px; }
+  main { padding-top: 24px; padding-bottom: 64px; }
+  .workspace-panel { padding: 20px 22px; }
+  .request-panel { padding: 18px 20px 16px; }
   .platform-grid,
   .platform-skeleton-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
@@ -22,7 +22,7 @@
 }
 
 @media (max-width: 639px) {
-  .site-header-inner { height: 58px; padding: 0 var(--mp-space-4); }
+  .site-header-inner { height: 52px; padding: 0 var(--mp-space-4); }
   .brand-mark { width: 32px; height: 32px; border-radius: 9px; }
   .brand-mark svg { width: 18px; height: 18px; }
   .brand-copy span { display: none; }
@@ -32,28 +32,28 @@
   .status-text-full { display: none; }
   .status-text-short { display: inline; }
 
-  main { padding: 32px var(--mp-space-4) 64px; }
-  .hero { margin-bottom: 30px; }
-  .eyebrow-pill { margin-bottom: 14px; padding: 5px 12px; font-size: 11px; }
-  .hero h1 { font-size: clamp(26px, 8vw, 36px); }
-  .hero-copy { margin: 12px auto 18px; font-size: 14px; line-height: 1.72; }
-  .hero-points { gap: 8px; }
-  .hero-point { padding: 5px 11px 5px 6px; font-size: 12px; }
-  .hero-point i { width: 20px; height: 20px; font-size: 11px; }
+  main { padding: 20px var(--mp-space-4) 56px; }
+  .hero { margin-bottom: 18px; }
+  .hero h1 { font-size: clamp(22px, 6.2vw, 27px); }
+  .hero-points { margin-top: 8px; gap: 5px 10px; }
+  .hero-point { font-size: 12px; }
+  .hero-dot { display: none; }
 
-  .workspace { gap: 16px; }
-  .workspace-panel { padding: 18px; border-radius: 18px; }
-  .request-panel { padding-top: 22px; }
-  .request-header { margin-bottom: 12px; }
+  .workspace { gap: 14px; }
+  .workspace-panel { padding: 16px; border-radius: 16px; }
+  .request-panel { padding: 16px; }
+  .request-header { margin-bottom: 10px; }
   .field-inline-label { display: none; }
-  .composer-shell .ant-input { padding: 13px 14px 10px; font-size: 14.5px; }
-  .composer-footer { padding: 8px 14px; }
+  .composer-shell .ant-input { padding: 12px 13px 8px; font-size: 14px; }
+  .composer-bar { flex-direction: column; align-items: stretch; gap: 10px; padding: 10px; }
+  .composer-tools { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .composer-tool-btn { width: 100%; }
   .shortcut-keys { display: none; }
-
-  .submit-actions { flex-direction: column; margin-top: 14px; }
-  .submit-actions .parse-submit,
-  .submit-actions .parse-tool { flex: 1 1 auto; width: 100%; height: 46px; }
-  .retention-strip { margin-top: 14px; padding: 9px 12px; font-size: 11.5px; }
+  .composer-primary-group { margin-left: 0; width: 100%; }
+  .composer-primary-group .parse-submit,
+  .composer-primary-group .parse-cancel { flex: 1 1 auto; width: 100%; height: 42px; }
+  .retention-note { align-items: flex-start; margin-top: 10px; font-size: 11.5px; }
+  .retention-note .anticon { margin-top: 3px; }
 
   .result-heading { flex-direction: column; align-items: flex-start; gap: 10px; margin-bottom: 18px; padding-bottom: 14px; }
   .result-metrics { justify-content: flex-start; }
